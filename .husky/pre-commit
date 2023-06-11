@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+cargo fmt -- --check
+cargo clippy -p jit-proxy -- -D warnings -D clippy::expect_used -D clippy::panic
+cargo clippy -p jit-proxy --tests -- -D warnings
+cargo test --quiet
+yarn prettify
+yarn lint
+cd ts/sdk
+tsc

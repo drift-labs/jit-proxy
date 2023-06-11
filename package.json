@@ -1,10 +1,13 @@
 {
+    "license": "Apache-2.0",
     "scripts": {
-        "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
-        "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"
-    },
-    "dependencies": {
-        "@project-serum/anchor": "^0.26.0"
+        "prettify": "prettier --check './ts/sdk/src/**/*.ts' './tests/**.ts'",
+        "prettify:fix": "prettier --write './ts/sdk/src/**/*.ts' './tests/**.ts'",
+        "lint": "eslint . --ext ts --quiet",
+        "lint:fix": "eslint . --ext ts --fix",
+        "prepare": "husky install",
+        "update-types": "cp target/types/jit_proxy.ts ts/sdk/src/types/jit_proxy.ts && prettier --write ts/sdk/src/types/jit_proxy.ts",
+        "anchor-tests": "yarn update-types && yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
     },
     "devDependencies": {
         "chai": "^4.3.4",
@@ -13,7 +16,19 @@
         "@types/bn.js": "^5.1.0",
         "@types/chai": "^4.3.0",
         "@types/mocha": "^9.0.0",
-        "typescript": "^4.3.5",
-        "prettier": "^2.6.2"
+        "typescript": "^4.5.4",
+        "prettier": "^2.6.2",
+        "@coral-xyz/anchor": "^0.26.0",
+        "@solana/web3.js": "1.73.2",
+        "@drift-labs/sdk": "2.31.0-beta.2",
+        "husky": "^8.0.0",
+        "@typescript-eslint/eslint-plugin": "^4.28.0",
+        "@typescript-eslint/parser": "^4.28.0",
+        "eslint": "^7.29.0",
+        "eslint-config-prettier": "^8.3.0",
+        "eslint-plugin-prettier": "^3.4.0"
+    },
+    "engines": {
+        "node": ">=16"
     }
 }

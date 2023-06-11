@@ -1,32 +1,37 @@
 use anchor_lang::prelude::*;
-use drift::controller::position::PositionDirection;
-use drift::instructions::{OrderParams};
-use drift::state::state::State;
-use drift::state::user::{User, UserStats};
-use drift::cpi::accounts::{PlaceAndMake};
-use drift::program::Drift;
 use borsh::{BorshDeserialize, BorshSerialize};
-use drift::instructions::optional_accounts::{AccountMaps, load_maps};
+use drift::controller::position::PositionDirection;
+use drift::cpi::accounts::PlaceAndMake;
+use drift::instructions::optional_accounts::{load_maps, AccountMaps};
+use drift::instructions::OrderParams;
 use drift::instructions::PostOnlyParam;
 use drift::math::safe_math::SafeMath;
-use drift::state::perp_market_map::{get_writable_perp_market_set, MarketSet};
+use drift::program::Drift;
+use drift::state::perp_market_map::MarketSet;
+use drift::state::state::State;
 use drift::state::user::{MarketType, OrderTriggerCondition, OrderType};
+use drift::state::user::{User, UserStats};
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 #[program]
 pub mod jit_proxy {
-    use drift::math::casting::Cast;
     use super::*;
+    use drift::math::casting::Cast;
 
-    pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams) -> Result<()> {
+    pub fn jit<'info>(
+        ctx: Context<'_, '_, '_, 'info, Jit<'info>>,
+        params: JitParams,
+    ) -> Result<()> {
         let clock = Clock::get()?;
         let slot = clock.slot;
 
         let taker = ctx.accounts.taker.load()?;
         let maker = ctx.accounts.user.load()?;
 
-        let taker_order = taker.get_order(params.taker_order_id).ok_or(ErrorCode::TakerOrderNotFound)?;
+        let taker_order = taker
+            .get_order(params.taker_order_id)
+            .ok_or(ErrorCode::TakerOrderNotFound)?;
         let market_type = taker_order.market_type;
         let market_index = taker_order.market_index;
         let taker_direction = taker_order.direction;
@@ -56,35 +61,56 @@ pub mod jit_proxy {
             (oracle_price, spot_market.order_tick_size)
         };
 
-        let taker_price = taker_order.force_get_limit_price(Some(oracle_price), None, slot, tick_size)?;
+        let taker_price =
+            taker_order.force_get_limit_price(Some(oracle_price), None, slot, tick_size)?;
 
         let maker_direction = taker_direction.opposite();
-        if maker_direction == PositionDirection::Long {
-            if taker_price > params.worst_price {
-                msg!("taker price {} > worst price {}", taker_price, params.worst_price);
-                return Err(ErrorCode::WorstPriceExceeded.into());
+        match maker_direction {
+            PositionDirection::Long => {
+                if taker_price > params.worst_price {
+                    msg!(
+                        "taker price {} > worst price {}",
+                        taker_price,
+                        params.worst_price
+                    );
+                    return Err(ErrorCode::WorstPriceExceeded.into());
+                }
             }
-        } else {
-            if taker_price < params.worst_price {
-                msg!("taker price {} < worst price {}", taker_price, params.worst_price);
-                return Err(ErrorCode::WorstPriceExceeded.into());
+            PositionDirection::Short => {
+                if taker_price < params.worst_price {
+                    msg!(
+                        "taker price {} < worst price {}",
+                        taker_price,
+                        params.worst_price
+                    );
+                    return Err(ErrorCode::WorstPriceExceeded.into());
+                }
             }
         }
         let maker_price = taker_price;
 
         let taker_base_asset_amount_unfilled = taker_order.get_base_asset_amount_unfilled(None)?;
         let maker_existing_position = if market_type == MarketType::Perp {
-            maker.get_perp_position(market_index).map_or(0, |p| p.base_asset_amount)
+            maker
+                .get_perp_position(market_index)
+                .map_or(0, |p| p.base_asset_amount)
         } else {
             let spot_market = spot_market_map.get_ref(&market_index)?;
-            maker.get_spot_position(market_index).map_or(0, |p| p.get_signed_token_amount(&spot_market).unwrap()).cast::<i64>()?
+            maker
+                .get_spot_position(market_index)
+                .map_or(0, |p| p.get_signed_token_amount(&spot_market).unwrap())
+                .cast::<i64>()?
         };
 
         let maker_base_asset_amount = if maker_direction == PositionDirection::Long {
             let size = params.max_position.safe_sub(maker_existing_position)?;
 
             if size <= 0 {
-                msg!("maker existing position {} >= max position {}", maker_existing_position, params.max_position);
+                msg!(
+                    "maker existing position {} >= max position {}",
+                    maker_existing_position,
+                    params.max_position
+                );
             }
 
             size.unsigned_abs().min(taker_base_asset_amount_unfilled)
@@ -92,7 +118,11 @@ pub mod jit_proxy {
             let size = maker_existing_position.safe_sub(params.max_position)?;
 
             if size <= 0 {
-                msg!("maker existing position {} <= max position {}", maker_existing_position, params.max_position);
+                msg!(
+                    "maker existing position {} <= max position {}",
+                    maker_existing_position,
+                    params.max_position
+                );
             }
 
             size.unsigned_abs().min(taker_base_asset_amount_unfilled)
@@ -122,7 +152,6 @@ pub mod jit_proxy {
         drop(maker);
 
         place_and_make(ctx, params.taker_order_id, order_params)?;
-
 
         Ok(())
     }
@@ -160,7 +189,11 @@ pub enum ErrorCode {
     TakerOrderNotFound,
 }
 
-fn place_and_make<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, taker_order_id: u32, order_params: OrderParams) -> Result<()> {
+fn place_and_make<'info>(
+    ctx: Context<'_, '_, '_, 'info, Jit<'info>>,
+    taker_order_id: u32,
+    order_params: OrderParams,
+) -> Result<()> {
     let drift_program = ctx.accounts.drift_program.to_account_info().clone();
     let cpi_accounts = PlaceAndMake {
         state: ctx.accounts.state.to_account_info().clone(),
