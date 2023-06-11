@@ -6,3 +6,7 @@ target
 node_modules
 test-ledger
 .idea
+migrations
+ts/sdk/lib/
+ts/sdk/src/**/*.js
+ts/sdk/src/**/*.js.map

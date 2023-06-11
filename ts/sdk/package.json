@@ -1,5 +1,5 @@
 {
-  "name": "@drift-labs/vaults-sdk",
+  "name": "@drift-labs/jit-proxy",
   "version": "0.1.0",
   "dependencies": {
     "@coral-xyz/anchor": "^0.26.0",
