@@ -16,9 +16,10 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 #[program]
 pub mod jit_proxy {
+    use drift::math::casting::Cast;
     use super::*;
 
-    pub fn jit_perp<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams) -> Result<()> {
+    pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams) -> Result<()> {
         let clock = Clock::get()?;
         let slot = clock.slot;
 
@@ -26,26 +27,36 @@ pub mod jit_proxy {
         let maker = ctx.accounts.user.load()?;
 
         let taker_order = taker.get_order(params.taker_order_id).ok_or(ErrorCode::TakerOrderNotFound)?;
+        let market_type = taker_order.market_type;
         let market_index = taker_order.market_index;
         let taker_direction = taker_order.direction;
 
         let remaining_accounts_iter = &mut ctx.remaining_accounts.iter().peekable();
         let AccountMaps {
             perp_market_map,
+            spot_market_map,
             mut oracle_map,
-            ..
         } = load_maps(
             remaining_accounts_iter,
-            &get_writable_perp_market_set(market_index),
+            &MarketSet::new(),
             &MarketSet::new(),
             slot,
             None,
         )?;
 
-        let perp_market = perp_market_map.get_ref(&market_index)?;
-        let oracle_price = oracle_map.get_price_data(&perp_market.amm.oracle)?.price;
+        let (oracle_price, tick_size) = if market_type == MarketType::Perp {
+            let perp_market = perp_market_map.get_ref(&market_index)?;
+            let oracle_price = oracle_map.get_price_data(&perp_market.amm.oracle)?.price;
 
-        let taker_price = taker_order.force_get_limit_price(Some(oracle_price), None, slot, perp_market.amm.order_tick_size)?;
+            (oracle_price, perp_market.amm.order_tick_size)
+        } else {
+            let spot_market = spot_market_map.get_ref(&market_index)?;
+            let oracle_price = oracle_map.get_price_data(&spot_market.oracle)?.price;
+
+            (oracle_price, spot_market.order_tick_size)
+        };
+
+        let taker_price = taker_order.force_get_limit_price(Some(oracle_price), None, slot, tick_size)?;
 
         let maker_direction = taker_direction.opposite();
         if maker_direction == PositionDirection::Long {
@@ -62,7 +73,13 @@ pub mod jit_proxy {
         let maker_price = taker_price;
 
         let taker_base_asset_amount_unfilled = taker_order.get_base_asset_amount_unfilled(None)?;
-        let maker_existing_position = maker.get_perp_position(market_index).map_or(0, |p| p.base_asset_amount);
+        let maker_existing_position = if market_type == MarketType::Perp {
+            maker.get_perp_position(market_index).map_or(0, |p| p.base_asset_amount)
+        } else {
+            let spot_market = spot_market_map.get_ref(&market_index)?;
+            maker.get_spot_position(market_index).map_or(0, |p| p.get_signed_token_amount(&spot_market).unwrap()).cast::<i64>()?
+        };
+
         let maker_base_asset_amount = if maker_direction == PositionDirection::Long {
             let size = params.max_position.safe_sub(maker_existing_position)?;
 
@@ -83,14 +100,14 @@ pub mod jit_proxy {
 
         let order_params = OrderParams {
             order_type: OrderType::Limit,
-            market_type: MarketType::Perp,
+            market_type,
             direction: maker_direction,
             user_order_id: 0,
             base_asset_amount: maker_base_asset_amount,
             price: maker_price,
             market_index,
             reduce_only: false,
-            post_only: PostOnlyParam::MustPostOnly,
+            post_only: params.post_only.unwrap_or(PostOnlyParam::MustPostOnly),
             immediate_or_cancel: true,
             max_ts: None,
             trigger_price: None,
@@ -131,6 +148,7 @@ pub struct JitParams {
     pub taker_order_id: u32,
     pub max_position: i64,
     pub worst_price: u64,
+    pub post_only: Option<PostOnlyParam>,
 }
 
 #[error_code]
@@ -156,7 +174,11 @@ fn place_and_make<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, taker_orde
     let cpi_context = CpiContext::new(drift_program, cpi_accounts)
         .with_remaining_accounts(ctx.remaining_accounts.into());
 
-    drift::cpi::place_and_make_perp_order(cpi_context, order_params, taker_order_id)?;
+    if order_params.market_type == MarketType::Perp {
+        drift::cpi::place_and_make_perp_order(cpi_context, order_params, taker_order_id)?;
+    } else {
+        drift::cpi::place_and_make_spot_order(cpi_context, order_params, taker_order_id, None)?;
+    }
 
     Ok(())
 }
