@@ -81,6 +81,7 @@ export class JitProxyClient {
 				state: await this.driftClient.getStatePublicKey(),
 				user: await this.driftClient.getUserAccountPublicKey(),
 				userStats: this.driftClient.getUserStatsAccountPublicKey(),
+				driftProgram: this.driftClient.program.programId,
 			})
 			.remainingAccounts(remainingAccounts)
 			.instruction();

@@ -4,7 +4,7 @@ use drift::controller::position::PositionDirection;
 use drift::cpi::accounts::PlaceAndMake;
 use drift::instructions::optional_accounts::{load_maps, AccountMaps};
 use drift::instructions::OrderParams;
-use drift::instructions::PostOnlyParam;
+use drift::instructions::PostOnlyParam as DriftPostOnlyParam;
 use drift::math::safe_math::SafeMath;
 use drift::program::Drift;
 use drift::state::perp_market_map::MarketSet;
@@ -12,7 +12,7 @@ use drift::state::state::State;
 use drift::state::user::{MarketType, OrderTriggerCondition, OrderType};
 use drift::state::user::{User, UserStats};
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("J1TnP8zvVxbtF5KFp5xRmWuvG9McnhzmBd9XGfCyuxFP");
 
 #[program]
 pub mod jit_proxy {
@@ -137,7 +137,10 @@ pub mod jit_proxy {
             price: maker_price,
             market_index,
             reduce_only: false,
-            post_only: params.post_only.unwrap_or(PostOnlyParam::MustPostOnly),
+            post_only: params
+                .post_only
+                .unwrap_or(PostOnlyParam::MustPostOnly)
+                .to_drift_param(),
             immediate_or_cancel: true,
             max_ts: None,
             trigger_price: None,
@@ -172,12 +175,29 @@ pub struct Jit<'info> {
     pub drift_program: Program<'info, Drift>,
 }
 
-#[derive(Debug, Clone, Copy, BorshSerialize, BorshDeserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, AnchorSerialize, AnchorDeserialize, PartialEq, Eq)]
 pub struct JitParams {
     pub taker_order_id: u32,
     pub max_position: i64,
     pub worst_price: u64,
     pub post_only: Option<PostOnlyParam>,
+}
+
+#[derive(Clone, Copy, BorshSerialize, BorshDeserialize, PartialEq, Debug, Eq)]
+pub enum PostOnlyParam {
+    None,
+    MustPostOnly, // Tx fails if order can't be post only
+    TryPostOnly,  // Tx succeeds and order not placed if can't be post only
+}
+
+impl PostOnlyParam {
+    pub fn to_drift_param(self) -> DriftPostOnlyParam {
+        match self {
+            PostOnlyParam::None => DriftPostOnlyParam::None,
+            PostOnlyParam::MustPostOnly => DriftPostOnlyParam::MustPostOnly,
+            PostOnlyParam::TryPostOnly => DriftPostOnlyParam::TryPostOnly,
+        }
+    }
 }
 
 #[error_code]

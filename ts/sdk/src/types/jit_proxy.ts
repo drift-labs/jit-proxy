@@ -51,6 +51,53 @@ export type JitProxy = {
 			];
 		}
 	];
+	types: [
+		{
+			name: 'JitParams';
+			type: {
+				kind: 'struct';
+				fields: [
+					{
+						name: 'takerOrderId';
+						type: 'u32';
+					},
+					{
+						name: 'maxPosition';
+						type: 'i64';
+					},
+					{
+						name: 'worstPrice';
+						type: 'u64';
+					},
+					{
+						name: 'postOnly';
+						type: {
+							option: {
+								defined: 'PostOnlyParam';
+							};
+						};
+					}
+				];
+			};
+		},
+		{
+			name: 'PostOnlyParam';
+			type: {
+				kind: 'enum';
+				variants: [
+					{
+						name: 'None';
+					},
+					{
+						name: 'MustPostOnly';
+					},
+					{
+						name: 'TryPostOnly';
+					}
+				];
+			};
+		}
+	];
 	errors: [
 		{
 			code: 6000;
@@ -116,6 +163,53 @@ export const IDL: JitProxy = {
 					},
 				},
 			],
+		},
+	],
+	types: [
+		{
+			name: 'JitParams',
+			type: {
+				kind: 'struct',
+				fields: [
+					{
+						name: 'takerOrderId',
+						type: 'u32',
+					},
+					{
+						name: 'maxPosition',
+						type: 'i64',
+					},
+					{
+						name: 'worstPrice',
+						type: 'u64',
+					},
+					{
+						name: 'postOnly',
+						type: {
+							option: {
+								defined: 'PostOnlyParam',
+							},
+						},
+					},
+				],
+			},
+		},
+		{
+			name: 'PostOnlyParam',
+			type: {
+				kind: 'enum',
+				variants: [
+					{
+						name: 'None',
+					},
+					{
+						name: 'MustPostOnly',
+					},
+					{
+						name: 'TryPostOnly',
+					},
+				],
+			},
 		},
 	],
 	errors: [

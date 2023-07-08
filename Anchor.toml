@@ -2,7 +2,7 @@
 seeds = false
 skip-lint = false
 [programs.localnet]
-jit_proxy = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+jit_proxy = "J1TnP8zvVxbtF5KFp5xRmWuvG9McnhzmBd9XGfCyuxFP"
 
 [registry]
 url = "https://api.apr.dev"
