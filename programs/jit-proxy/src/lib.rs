@@ -67,23 +67,15 @@ pub mod jit_proxy {
         let maker_direction = taker_direction.opposite();
         match maker_direction {
             PositionDirection::Long => {
-                if taker_price > params.worst_price {
-                    msg!(
-                        "taker price {} > worst price {}",
-                        taker_price,
-                        params.worst_price
-                    );
-                    return Err(ErrorCode::WorstPriceExceeded.into());
+                if taker_price > params.bid {
+                    msg!("taker price {} > worst bid {}", taker_price, params.bid);
+                    return Err(ErrorCode::BidNotCrossed.into());
                 }
             }
             PositionDirection::Short => {
-                if taker_price < params.worst_price {
-                    msg!(
-                        "taker price {} < worst price {}",
-                        taker_price,
-                        params.worst_price
-                    );
-                    return Err(ErrorCode::WorstPriceExceeded.into());
+                if taker_price < params.ask {
+                    msg!("taker price {} < worst ask {}", taker_price, params.ask);
+                    return Err(ErrorCode::AskNotCrossed.into());
                 }
             }
         }
@@ -115,7 +107,7 @@ pub mod jit_proxy {
 
             size.unsigned_abs().min(taker_base_asset_amount_unfilled)
         } else {
-            let size = maker_existing_position.safe_sub(params.max_position)?;
+            let size = maker_existing_position.safe_sub(params.min_position)?;
 
             if size <= 0 {
                 msg!(
@@ -179,7 +171,9 @@ pub struct Jit<'info> {
 pub struct JitParams {
     pub taker_order_id: u32,
     pub max_position: i64,
-    pub worst_price: u64,
+    pub min_position: i64,
+    pub bid: u64,
+    pub ask: u64,
     pub post_only: Option<PostOnlyParam>,
 }
 
@@ -203,8 +197,10 @@ impl PostOnlyParam {
 #[error_code]
 #[derive(PartialEq, Eq)]
 pub enum ErrorCode {
-    #[msg("WorstPriceExceeded")]
-    WorstPriceExceeded,
+    #[msg("BidNotCrossed")]
+    BidNotCrossed,
+    #[msg("AskNotCrossed")]
+    AskNotCrossed,
     #[msg("TakerOrderNotFound")]
     TakerOrderNotFound,
 }

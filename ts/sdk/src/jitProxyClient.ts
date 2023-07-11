@@ -18,7 +18,9 @@ export type JitIxParams = {
 	taker: UserAccount;
 	takerOrderId: number;
 	maxPosition: BN;
-	worstPrice: BN;
+	minPosition: BN;
+	bid: BN;
+	ask: BN;
 	postOnly: PostOnlyParams | null;
 };
 
@@ -52,7 +54,9 @@ export class JitProxyClient {
 		taker,
 		takerOrderId,
 		maxPosition,
-		worstPrice,
+		minPosition,
+		bid,
+		ask,
 		postOnly = null,
 	}: JitIxParams): Promise<TransactionInstruction> {
 		const order = taker.orders.find((order) => order.orderId === takerOrderId);
@@ -69,7 +73,9 @@ export class JitProxyClient {
 		const jitParams = {
 			takerOrderId,
 			maxPosition,
-			worstPrice,
+			minPosition,
+			bid,
+			ask,
 			postOnly,
 		};
 
