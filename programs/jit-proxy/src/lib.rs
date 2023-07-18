@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use borsh::{BorshDeserialize, BorshSerialize};
 use drift::controller::position::PositionDirection;
 use drift::cpi::accounts::PlaceAndMake;
+use drift::error::DriftResult;
 use drift::instructions::optional_accounts::{load_maps, AccountMaps};
 use drift::instructions::OrderParams;
 use drift::instructions::PostOnlyParam as DriftPostOnlyParam;
@@ -65,15 +66,16 @@ pub mod jit_proxy {
             taker_order.force_get_limit_price(Some(oracle_price), None, slot, tick_size)?;
 
         let maker_direction = taker_direction.opposite();
+        let maker_worst_price = params.get_worst_price(oracle_price, taker_direction)?;
         match maker_direction {
             PositionDirection::Long => {
-                if taker_price > params.bid {
+                if taker_price > maker_worst_price {
                     msg!("taker price {} > worst bid {}", taker_price, params.bid);
                     return Err(ErrorCode::BidNotCrossed.into());
                 }
             }
             PositionDirection::Short => {
-                if taker_price < params.ask {
+                if taker_price < maker_worst_price {
                     msg!("taker price {} < worst ask {}", taker_price, params.ask);
                     return Err(ErrorCode::AskNotCrossed.into());
                 }
@@ -83,9 +85,16 @@ pub mod jit_proxy {
 
         let taker_base_asset_amount_unfilled = taker_order.get_base_asset_amount_unfilled(None)?;
         let maker_existing_position = if market_type == MarketType::Perp {
-            maker
-                .get_perp_position(market_index)
-                .map_or(0, |p| p.base_asset_amount)
+            let perp_market = perp_market_map.get_ref(&market_index)?;
+            let perp_position = maker.get_perp_position(market_index);
+            match perp_position {
+                Ok(perp_position) => {
+                    perp_position
+                        .simulate_settled_lp_position(&perp_market, oracle_price)?
+                        .base_asset_amount
+                }
+                Err(_) => 0,
+            }
         } else {
             let spot_market = spot_market_map.get_ref(&market_index)?;
             maker
@@ -172,9 +181,29 @@ pub struct JitParams {
     pub taker_order_id: u32,
     pub max_position: i64,
     pub min_position: i64,
-    pub bid: u64,
-    pub ask: u64,
+    pub bid: i64,
+    pub ask: i64,
+    pub price_type: PriceType,
     pub post_only: Option<PostOnlyParam>,
+}
+
+impl JitParams {
+    pub fn get_worst_price(
+        self,
+        oracle_price: i64,
+        taker_direction: PositionDirection,
+    ) -> DriftResult<u64> {
+        match (taker_direction, self.price_type) {
+            (PositionDirection::Long, PriceType::Limit) => Ok(self.ask.unsigned_abs()),
+            (PositionDirection::Short, PriceType::Limit) => Ok(self.bid.unsigned_abs()),
+            (PositionDirection::Long, PriceType::Oracle) => {
+                Ok(oracle_price.safe_add(self.ask)?.unsigned_abs())
+            }
+            (PositionDirection::Short, PriceType::Oracle) => {
+                Ok(oracle_price.safe_add(self.bid)?.unsigned_abs())
+            }
+        }
+    }
 }
 
 #[derive(Clone, Copy, BorshSerialize, BorshDeserialize, PartialEq, Debug, Eq)]
@@ -192,6 +221,12 @@ impl PostOnlyParam {
             PostOnlyParam::TryPostOnly => DriftPostOnlyParam::TryPostOnly,
         }
     }
+}
+
+#[derive(Clone, Copy, BorshSerialize, BorshDeserialize, PartialEq, Debug, Eq)]
+pub enum PriceType {
+    Limit,
+    Oracle,
 }
 
 #[error_code]

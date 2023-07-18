@@ -22,7 +22,13 @@ export type JitIxParams = {
 	bid: BN;
 	ask: BN;
 	postOnly: PostOnlyParams | null;
+	priceType?: PriceType;
 };
+
+export class PriceType {
+	static readonly LIMIT = { limit: {} };
+	static readonly ORACLE = { oracle: {} };
+}
 
 export class JitProxyClient {
 	private driftClient: DriftClient;
@@ -58,6 +64,7 @@ export class JitProxyClient {
 		bid,
 		ask,
 		postOnly = null,
+		priceType = PriceType.LIMIT,
 	}: JitIxParams): Promise<TransactionInstruction> {
 		const order = taker.orders.find((order) => order.orderId === takerOrderId);
 		const remainingAccounts = this.driftClient.getRemainingAccounts({
@@ -70,6 +77,19 @@ export class JitProxyClient {
 				: [],
 		});
 
+		if (isVariant(order.marketType, 'spot')) {
+			remainingAccounts.push({
+				pubkey: this.driftClient.getSpotMarketAccount(order.marketIndex).vault,
+				isWritable: false,
+				isSigner: false,
+			});
+			remainingAccounts.push({
+				pubkey: this.driftClient.getQuoteSpotMarketAccount().vault,
+				isWritable: false,
+				isSigner: false,
+			});
+		}
+
 		const jitParams = {
 			takerOrderId,
 			maxPosition,
@@ -77,6 +97,7 @@ export class JitProxyClient {
 			bid,
 			ask,
 			postOnly,
+			priceType,
 		};
 
 		return this.program.methods

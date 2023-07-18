@@ -71,11 +71,17 @@ export type JitProxy = {
 					},
 					{
 						name: 'bid';
-						type: 'u64';
+						type: 'i64';
 					},
 					{
 						name: 'ask';
-						type: 'u64';
+						type: 'i64';
+					},
+					{
+						name: 'priceType';
+						type: {
+							defined: 'PriceType';
+						};
 					},
 					{
 						name: 'postOnly';
@@ -101,6 +107,20 @@ export type JitProxy = {
 					},
 					{
 						name: 'TryPostOnly';
+					}
+				];
+			};
+		},
+		{
+			name: 'PriceType';
+			type: {
+				kind: 'enum';
+				variants: [
+					{
+						name: 'Limit';
+					},
+					{
+						name: 'Oracle';
 					}
 				];
 			};
@@ -198,11 +218,17 @@ export const IDL: JitProxy = {
 					},
 					{
 						name: 'bid',
-						type: 'u64',
+						type: 'i64',
 					},
 					{
 						name: 'ask',
-						type: 'u64',
+						type: 'i64',
+					},
+					{
+						name: 'priceType',
+						type: {
+							defined: 'PriceType',
+						},
 					},
 					{
 						name: 'postOnly',
@@ -228,6 +254,20 @@ export const IDL: JitProxy = {
 					},
 					{
 						name: 'TryPostOnly',
+					},
+				],
+			},
+		},
+		{
+			name: 'PriceType',
+			type: {
+				kind: 'enum',
+				variants: [
+					{
+						name: 'Limit',
+					},
+					{
+						name: 'Oracle',
 					},
 				],
 			},
