@@ -16,11 +16,12 @@ export type UserFilter = (
 	userKey: string,
 	order: Order
 ) => boolean;
+
 export type JitParams = {
 	bid: BN;
 	ask: BN;
 	minPosition: BN;
-	maxPosition;
+	maxPosition : BN;
 	priceType: PriceType;
 };
 
