@@ -67,6 +67,7 @@ export class JitProxyClient {
 		ask,
 		postOnly = null,
 		priceType = PriceType.LIMIT,
+		referrerInfo,
 	}: JitIxParams): Promise<TransactionInstruction> {
 		const order = taker.orders.find((order) => order.orderId === takerOrderId);
 		const remainingAccounts = this.driftClient.getRemainingAccounts({
@@ -78,6 +79,19 @@ export class JitProxyClient {
 				? [order.marketIndex]
 				: [],
 		});
+
+		if (referrerInfo) {
+			remainingAccounts.push({
+				pubkey: referrerInfo.referrer,
+				isWritable: true,
+				isSigner: false,
+			});
+			remainingAccounts.push({
+				pubkey: referrerInfo.referrerStats,
+				isWritable: true,
+				isSigner: false,
+			});
+		}
 
 		if (isVariant(order.marketType, 'spot')) {
 			remainingAccounts.push({
