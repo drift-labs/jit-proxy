@@ -4,6 +4,7 @@ import {
 	isVariant,
 	PostOnlyParams,
 	QUOTE_SPOT_MARKET_INDEX,
+	ReferrerInfo,
 	TxParams,
 	UserAccount,
 } from '@drift-labs/sdk';
@@ -23,6 +24,7 @@ export type JitIxParams = {
 	ask: BN;
 	postOnly: PostOnlyParams | null;
 	priceType?: PriceType;
+	referrerInfo?: ReferrerInfo;
 };
 
 export class PriceType {

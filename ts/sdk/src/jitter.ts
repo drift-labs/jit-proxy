@@ -2,13 +2,13 @@ import { JitProxyClient, PriceType } from './jitProxyClient';
 import { PublicKey } from '@solana/web3.js';
 import {
 	AuctionSubscriber,
-	BN,
+	BN, BulkAccountLoader,
 	DriftClient,
 	getUserStatsAccountPublicKey,
 	hasAuctionPrice,
 	isVariant,
 	Order,
-	UserAccount,
+	UserAccount, UserMap, UserStatsMap,
 } from '@drift-labs/sdk';
 
 export type UserFilter = (
@@ -28,6 +28,7 @@ export class Jitter {
 	auctionSubscriber: AuctionSubscriber;
 	driftClient: DriftClient;
 	jitProxyClient: JitProxyClient;
+	userStatsMap: UserStatsMap;
 
 	perpParams = new Map<number, JitParams>();
 	spotParams = new Map<number, JitParams>();
@@ -40,17 +41,26 @@ export class Jitter {
 		auctionSubscriber,
 		jitProxyClient,
 		driftClient,
+		userStatsMap,
 	}: {
 		driftClient: DriftClient;
 		auctionSubscriber: AuctionSubscriber;
 		jitProxyClient: JitProxyClient;
+		userStatsMap?: UserStatsMap;
 	}) {
 		this.auctionSubscriber = auctionSubscriber;
 		this.driftClient = driftClient;
 		this.jitProxyClient = jitProxyClient;
+		this.userStatsMap = userStatsMap || new UserStatsMap(this.driftClient, {
+			type: 'polling',
+			accountLoader: new BulkAccountLoader(this.driftClient.connection, 'confirmed', 0),
+		});
 	}
 
 	async subscribe(): Promise<void> {
+		await this.driftClient.subscribe();
+		await this.userStatsMap.subscribe();
+
 		await this.auctionSubscriber.subscribe();
 		this.auctionSubscriber.eventEmitter.on(
 			'onAccountUpdate',
@@ -132,6 +142,9 @@ export class Jitter {
 					return;
 				}
 
+				const takerStats = await this.userStatsMap.mustGet(taker.authority.toString());
+				const referrerInfo = takerStats.getReferrerInfo();
+
 				console.log(`Trying to fill ${orderSignature}`);
 				try {
 					const { txSig } = await this.jitProxyClient.jit({
@@ -145,6 +158,7 @@ export class Jitter {
 						ask: params.ask,
 						postOnly: null,
 						priceType: params.priceType,
+						referrerInfo,
 					});
 
 					console.log(`Filled ${orderSignature} txSig ${txSig}`);
