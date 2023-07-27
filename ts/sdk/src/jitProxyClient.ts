@@ -71,7 +71,7 @@ export class JitProxyClient {
 		referrerInfo,
 		subAccountId
 	}: JitIxParams): Promise<TransactionInstruction> {
-		subAccountId = subAccountId || this.driftClient.activeSubAccountId;
+		subAccountId = subAccountId !== undefined ? subAccountId : this.driftClient.activeSubAccountId;
 		const order = taker.orders.find((order) => order.orderId === takerOrderId);
 		const remainingAccounts = this.driftClient.getRemainingAccounts({
 			userAccounts: [taker, this.driftClient.getUserAccount(subAccountId)],
