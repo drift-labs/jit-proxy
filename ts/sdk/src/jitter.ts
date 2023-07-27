@@ -16,12 +16,14 @@ export type UserFilter = (
 	userKey: string,
 	order: Order
 ) => boolean;
+
 export type JitParams = {
 	bid: BN;
 	ask: BN;
 	minPosition: BN;
 	maxPosition;
 	priceType: PriceType;
+	subAccountId?: number;
 };
 
 export class Jitter {
@@ -159,6 +161,7 @@ export class Jitter {
 						postOnly: null,
 						priceType: params.priceType,
 						referrerInfo,
+						subAccountId: params.subAccountId,
 					});
 
 					console.log(`Filled ${orderSignature} txSig ${txSig}`);

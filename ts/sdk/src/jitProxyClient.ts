@@ -25,6 +25,7 @@ export type JitIxParams = {
 	postOnly: PostOnlyParams | null;
 	priceType?: PriceType;
 	referrerInfo?: ReferrerInfo;
+	subAccountId?: number;
 };
 
 export class PriceType {
@@ -68,10 +69,12 @@ export class JitProxyClient {
 		postOnly = null,
 		priceType = PriceType.LIMIT,
 		referrerInfo,
+		subAccountId
 	}: JitIxParams): Promise<TransactionInstruction> {
+		subAccountId = subAccountId || this.driftClient.activeSubAccountId;
 		const order = taker.orders.find((order) => order.orderId === takerOrderId);
 		const remainingAccounts = this.driftClient.getRemainingAccounts({
-			userAccounts: [taker, this.driftClient.getUserAccount()],
+			userAccounts: [taker, this.driftClient.getUserAccount(subAccountId)],
 			writableSpotMarketIndexes: isVariant(order.marketType, 'spot')
 				? [order.marketIndex, QUOTE_SPOT_MARKET_INDEX]
 				: [],
@@ -122,7 +125,7 @@ export class JitProxyClient {
 				taker: takerKey,
 				takerStats: takerStatsKey,
 				state: await this.driftClient.getStatePublicKey(),
-				user: await this.driftClient.getUserAccountPublicKey(),
+				user: await this.driftClient.getUserAccountPublicKey(subAccountId),
 				userStats: this.driftClient.getUserStatsAccountPublicKey(),
 				driftProgram: this.driftClient.program.programId,
 			})
