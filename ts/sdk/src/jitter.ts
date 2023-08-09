@@ -7,6 +7,7 @@ import {
 	convertToNumber,
 	DriftClient,
 	getAuctionPrice,
+	getAuctionPriceForOracleOffsetAuction,
 	getUserStatsAccountPublicKey,
 	hasAuctionPrice,
 	isVariant,
@@ -130,11 +131,16 @@ export class Jitter {
 							return;
 						}
 
-						console.log('New order signature: ', orderSignature);
-						console.log(
-							'ongoing auctions: ',
-							JSON.stringify(this.onGoingAuctions.keys())
+						const perpMarketAccount = this.driftClient.getPerpMarketAccount(
+							order.marketIndex
 						);
+						if (
+							order.baseAssetAmount
+								.sub(order.baseAssetAmountFilled)
+								.lte(perpMarketAccount.amm.minOrderSize)
+						) {
+							return;
+						}
 
 						const promise = this.createTryFill(
 							taker,
@@ -146,6 +152,17 @@ export class Jitter {
 						this.onGoingAuctions.set(orderSignature, promise);
 					} else {
 						if (!this.spotParams.has(order.marketIndex)) {
+							return;
+						}
+
+						const spotMarketAccount = this.driftClient.getSpotMarketAccount(
+							order.marketIndex
+						);
+						if (
+							order.baseAssetAmount
+								.sub(order.baseAssetAmountFilled)
+								.lte(spotMarketAccount.minOrderSize)
+						) {
 							return;
 						}
 
@@ -209,17 +226,38 @@ export class Jitter {
 			`);
 
 			this.waitForSlotOrCrossOrExpiry(
-				order.slot.toNumber() + slotsTilCross,
-				order
-			).then(async (slot: number) => {
+				willCross
+					? order.slot.toNumber() + slotsTilCross
+					: order.slot.toNumber() + order.auctionDuration + 1,
+				order,
+				{
+					slotsTilCross,
+					willCross,
+					bid,
+					ask,
+					auctionStartPrice,
+					auctionEndPrice,
+					stepSize,
+					oraclePrice,
+				}
+			).then(async ({ slot, updatedDetails }) => {
 				if (slot === -1) {
 					console.log('Auction expired without crossing');
 					this.onGoingAuctions.delete(orderSignature);
 					return;
 				}
 
+				const params = isVariant(order.marketType, 'perp')
+					? this.perpParams.get(order.marketIndex)
+					: this.spotParams.get(order.marketIndex);
+				const bid = isVariant(params.priceType, 'oracle')
+					? convertToNumber(oraclePrice.price.sub(params.bid), PRICE_PRECISION)
+					: convertToNumber(params.bid, PRICE_PRECISION);
+				const ask = isVariant(params.priceType, 'oracle')
+					? convertToNumber(oraclePrice.price.add(params.ask), PRICE_PRECISION)
+					: convertToNumber(params.ask, PRICE_PRECISION);
 				const auctionPrice = convertToNumber(
-					getAuctionPrice(order, slot, oraclePrice.price),
+					getAuctionPrice(order, slot, updatedDetails.oraclePrice.price),
 					PRICE_PRECISION
 				);
 				console.log(`
@@ -230,38 +268,50 @@ export class Jitter {
 					Got slot ${slot}
 				`);
 
-				console.log(`Trying to fill ${orderSignature}`);
-				try {
-					const { txSig } = await this.jitProxyClient.jit({
-						takerKey,
-						takerStatsKey,
-						taker,
-						takerOrderId: order.orderId,
-						maxPosition: params.maxPosition,
-						minPosition: params.minPosition,
-						bid: params.bid,
-						ask: params.ask,
-						postOnly: null,
-						priceType: params.priceType,
-						referrerInfo,
-						subAccountId: params.subAccountId,
-					});
+				console.log(`Trying to fill ${orderSignature} with:
+					market: ${bid}@${ask}
+					auction price: ${auctionPrice}
+					submitting" ${convertToNumber(params.bid, PRICE_PRECISION)}@${convertToNumber(
+					params.ask,
+					PRICE_PRECISION
+				)}
+				`);
+				let i = 0;
+				while (i < 3) {
+					try {
+						const { txSig } = await this.jitProxyClient.jit({
+							takerKey,
+							takerStatsKey,
+							taker,
+							takerOrderId: order.orderId,
+							maxPosition: params.maxPosition,
+							minPosition: params.minPosition,
+							bid: params.bid,
+							ask: params.ask,
+							postOnly: null,
+							priceType: params.priceType,
+							referrerInfo,
+							subAccountId: params.subAccountId,
+						});
 
-					console.log(`Filled ${orderSignature} txSig ${txSig}`);
-					await sleep(10000);
-					this.onGoingAuctions.delete(orderSignature);
-					return;
-				} catch (e) {
-					console.error(`Failed to fill ${orderSignature}`);
-					if (e.message.includes('0x1770') || e.message.includes('0x1771')) {
-						console.log('Order does not cross params yet');
-					} else if (e.message.includes('0x1793')) {
-						console.log('Oracle invalid');
-					} else {
-						await sleep(10000);
+						console.log(`Filled ${orderSignature} txSig ${txSig}`);
+						await sleep(1000);
 						this.onGoingAuctions.delete(orderSignature);
 						return;
+					} catch (e) {
+						console.error(`Failed to fill ${orderSignature}`);
+						if (e.message.includes('0x1770') || e.message.includes('0x1771')) {
+							console.log('Order does not cross params yet');
+						} else if (e.message.includes('0x1793')) {
+							console.log('Oracle invalid');
+						} else {
+							await sleep(1000);
+							this.onGoingAuctions.delete(orderSignature);
+							return;
+						}
 					}
+					await sleep(50);
+					i++;
 				}
 			});
 			this.onGoingAuctions.delete(orderSignature);
@@ -270,46 +320,72 @@ export class Jitter {
 
 	getAuctionAndOrderDetails(order: Order): AuctionAndOrderDetails {
 		// Find number of slots until the order is expected to be in cross
-		const params = this.perpParams.get(order.marketIndex);
-		const oraclePrice = this.driftClient.getOracleDataForPerpMarket(
-			order.marketIndex
-		);
-		const makerOrderDir = isVariant(order.direction, 'long') ? 'sell' : 'buy';
+		const params = isVariant(order.marketType, 'perp')
+			? this.perpParams.get(order.marketIndex)
+			: this.spotParams.get(order.marketIndex);
+		const oraclePrice = isVariant(order.marketType, 'perp')
+			? this.driftClient.getOracleDataForPerpMarket(order.marketIndex)
+			: this.driftClient.getOracleDataForSpotMarket(order.marketIndex);
 
+		const makerOrderDir = isVariant(order.direction, 'long') ? 'sell' : 'buy';
 		const auctionStartPrice = convertToNumber(
 			isVariant(order.orderType, 'oracle')
-				? oraclePrice.price.add(order.auctionStartPrice)
+				? getAuctionPriceForOracleOffsetAuction(
+						order,
+						order.slot.toNumber(),
+						oraclePrice.price
+				  )
 				: order.auctionStartPrice,
 			PRICE_PRECISION
 		);
 		const auctionEndPrice = convertToNumber(
 			isVariant(order.orderType, 'oracle')
-				? oraclePrice.price.add(order.auctionEndPrice)
+				? getAuctionPriceForOracleOffsetAuction(
+						order,
+						order.slot.toNumber() + order.auctionDuration - 1,
+						oraclePrice.price
+				  )
 				: order.auctionEndPrice,
 			PRICE_PRECISION
 		);
 
-		const bid = convertToNumber(
-			oraclePrice.price.sub(params.bid),
-			PRICE_PRECISION
-		);
-		const ask = convertToNumber(
-			oraclePrice.price.add(params.ask),
-			PRICE_PRECISION
-		);
+		const bid = isVariant(params.priceType, 'oracle')
+			? convertToNumber(oraclePrice.price.sub(params.bid), PRICE_PRECISION)
+			: convertToNumber(params.bid, PRICE_PRECISION);
+		const ask = isVariant(params.priceType, 'oracle')
+			? convertToNumber(oraclePrice.price.add(params.ask), PRICE_PRECISION)
+			: convertToNumber(params.ask, PRICE_PRECISION);
 
-		const stepSize =
-			(auctionEndPrice - auctionStartPrice) / (order.auctionDuration - 1);
 		let slotsTilCross = 0;
 		let willCross = false;
+		const stepSize =
+			(auctionEndPrice - auctionStartPrice) / (order.auctionDuration - 1);
 		while (slotsTilCross < order.auctionDuration) {
 			if (makerOrderDir === 'buy') {
-				if (auctionStartPrice + stepSize * slotsTilCross <= bid) {
+				if (
+					convertToNumber(
+						getAuctionPrice(
+							order,
+							order.slot.toNumber() + slotsTilCross,
+							oraclePrice.price
+						),
+						PRICE_PRECISION
+					) <= bid
+				) {
 					willCross = true;
 					break;
 				}
 			} else {
-				if (auctionStartPrice + stepSize * slotsTilCross >= ask) {
+				if (
+					convertToNumber(
+						getAuctionPrice(
+							order,
+							order.slot.toNumber() + slotsTilCross,
+							oraclePrice.price
+						),
+						PRICE_PRECISION
+					) >= ask
+				) {
 					willCross = true;
 					break;
 				}
@@ -331,27 +407,31 @@ export class Jitter {
 
 	async waitForSlotOrCrossOrExpiry(
 		targetSlot: number,
-		order: Order
-	): Promise<number> {
+		order: Order,
+		initialDetails: AuctionAndOrderDetails
+	): Promise<{ slot: number; updatedDetails: AuctionAndOrderDetails }> {
 		const auctionEndSlot = order.auctionDuration + order.slot.toNumber();
+		let currentDetails: AuctionAndOrderDetails = initialDetails;
+		let willCross = initialDetails.willCross;
 		return new Promise((resolve) => {
 			// Immediately return if we are past target slot
 
-			// Otherwise listen for new slots in case we hit the target slot
+			// Otherwise listen for new slots in case we hit the target slot and we're gonna cross
 			this.slotSubscriber.eventEmitter.on('newSlot', (slot) => {
-				if (slot >= targetSlot) {
-					resolve(slot);
+				if (slot >= targetSlot && willCross) {
+					resolve({ slot, updatedDetails: currentDetails });
 				}
 			});
 
 			// Update target slot as the bid/ask and the oracle changes
 			setInterval(async () => {
 				if (this.slotSubscriber.currentSlot >= auctionEndSlot) {
-					resolve(-1);
+					resolve({ slot: -1, updatedDetails: currentDetails });
 				}
 
-				const currentDetails = this.getAuctionAndOrderDetails(order);
-				if (currentDetails.willCross) {
+				currentDetails = this.getAuctionAndOrderDetails(order);
+				willCross = currentDetails.willCross;
+				if (willCross) {
 					targetSlot = order.slot.toNumber() + currentDetails.slotsTilCross;
 				}
 			}, 100);
