@@ -49,6 +49,44 @@ export type JitProxy = {
 					};
 				}
 			];
+		},
+		{
+			name: 'take';
+			accounts: [
+				{
+					name: 'state';
+					isMut: false;
+					isSigner: false;
+				},
+				{
+					name: 'user';
+					isMut: true;
+					isSigner: false;
+				},
+				{
+					name: 'userStats';
+					isMut: true;
+					isSigner: false;
+				},
+				{
+					name: 'authority';
+					isMut: false;
+					isSigner: true;
+				},
+				{
+					name: 'driftProgram';
+					isMut: false;
+					isSigner: false;
+				}
+			];
+			args: [
+				{
+					name: 'params';
+					type: {
+						defined: 'TakeParams';
+					};
+				}
+			];
 		}
 	];
 	types: [
@@ -95,6 +133,52 @@ export type JitProxy = {
 			};
 		},
 		{
+			name: 'TakeParams';
+			type: {
+				kind: 'struct';
+				fields: [
+					{
+						name: 'marketIndex';
+						type: 'u16';
+					},
+					{
+						name: 'marketType';
+						type: {
+							defined: 'MarketType';
+						};
+					},
+					{
+						name: 'maxPosition';
+						type: 'i64';
+					},
+					{
+						name: 'minPosition';
+						type: 'i64';
+					},
+					{
+						name: 'bid';
+						type: 'i64';
+					},
+					{
+						name: 'ask';
+						type: 'i64';
+					},
+					{
+						name: 'priceType';
+						type: {
+							defined: 'PriceType';
+						};
+					},
+					{
+						name: 'fulfillmentMethod';
+						type: {
+							option: 'u8';
+						};
+					}
+				];
+			};
+		},
+		{
 			name: 'PostOnlyParam';
 			type: {
 				kind: 'enum';
@@ -124,6 +208,20 @@ export type JitProxy = {
 					}
 				];
 			};
+		},
+		{
+			name: 'MarketType';
+			type: {
+				kind: 'enum';
+				variants: [
+					{
+						name: 'Perp';
+					},
+					{
+						name: 'Spot';
+					}
+				];
+			};
 		}
 	];
 	errors: [
@@ -141,6 +239,11 @@ export type JitProxy = {
 			code: 6002;
 			name: 'TakerOrderNotFound';
 			msg: 'TakerOrderNotFound';
+		},
+		{
+			code: 6003;
+			name: 'DidNotCrossMakers';
+			msg: 'DidNotCrossMakers';
 		}
 	];
 };
@@ -197,6 +300,44 @@ export const IDL: JitProxy = {
 				},
 			],
 		},
+		{
+			name: 'take',
+			accounts: [
+				{
+					name: 'state',
+					isMut: false,
+					isSigner: false,
+				},
+				{
+					name: 'user',
+					isMut: true,
+					isSigner: false,
+				},
+				{
+					name: 'userStats',
+					isMut: true,
+					isSigner: false,
+				},
+				{
+					name: 'authority',
+					isMut: false,
+					isSigner: true,
+				},
+				{
+					name: 'driftProgram',
+					isMut: false,
+					isSigner: false,
+				},
+			],
+			args: [
+				{
+					name: 'params',
+					type: {
+						defined: 'TakeParams',
+					},
+				},
+			],
+		},
 	],
 	types: [
 		{
@@ -242,6 +383,52 @@ export const IDL: JitProxy = {
 			},
 		},
 		{
+			name: 'TakeParams',
+			type: {
+				kind: 'struct',
+				fields: [
+					{
+						name: 'marketIndex',
+						type: 'u16',
+					},
+					{
+						name: 'marketType',
+						type: {
+							defined: 'MarketType',
+						},
+					},
+					{
+						name: 'maxPosition',
+						type: 'i64',
+					},
+					{
+						name: 'minPosition',
+						type: 'i64',
+					},
+					{
+						name: 'bid',
+						type: 'i64',
+					},
+					{
+						name: 'ask',
+						type: 'i64',
+					},
+					{
+						name: 'priceType',
+						type: {
+							defined: 'PriceType',
+						},
+					},
+					{
+						name: 'fulfillmentMethod',
+						type: {
+							option: 'u8',
+						},
+					},
+				],
+			},
+		},
+		{
 			name: 'PostOnlyParam',
 			type: {
 				kind: 'enum',
@@ -272,6 +459,20 @@ export const IDL: JitProxy = {
 				],
 			},
 		},
+		{
+			name: 'MarketType',
+			type: {
+				kind: 'enum',
+				variants: [
+					{
+						name: 'Perp',
+					},
+					{
+						name: 'Spot',
+					},
+				],
+			},
+		},
 	],
 	errors: [
 		{
@@ -288,6 +489,11 @@ export const IDL: JitProxy = {
 			code: 6002,
 			name: 'TakerOrderNotFound',
 			msg: 'TakerOrderNotFound',
+		},
+		{
+			code: 6003,
+			name: 'DidNotCrossMakers',
+			msg: 'DidNotCrossMakers',
 		},
 	],
 };

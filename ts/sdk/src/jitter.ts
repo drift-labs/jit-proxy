@@ -21,7 +21,7 @@ export type JitParams = {
 	bid: BN;
 	ask: BN;
 	minPosition: BN;
-	maxPosition;
+	maxPosition : BN;
 	priceType: PriceType;
 	subAccountId?: number;
 };
