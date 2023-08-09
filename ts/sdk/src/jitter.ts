@@ -2,13 +2,20 @@ import { JitProxyClient, PriceType } from './jitProxyClient';
 import { PublicKey } from '@solana/web3.js';
 import {
 	AuctionSubscriber,
-	BN, BulkAccountLoader,
+	BN,
+	BulkAccountLoader,
+	convertToNumber,
 	DriftClient,
+	getAuctionPrice,
 	getUserStatsAccountPublicKey,
 	hasAuctionPrice,
 	isVariant,
+	OraclePriceData,
 	Order,
-	UserAccount, UserMap, UserStatsMap,
+	PRICE_PRECISION,
+	SlotSubscriber,
+	UserAccount,
+	UserStatsMap,
 } from '@drift-labs/sdk';
 
 export type UserFilter = (
@@ -26,8 +33,20 @@ export type JitParams = {
 	subAccountId?: number;
 };
 
+type AuctionAndOrderDetails = {
+	slotsTilCross: number;
+	willCross: boolean;
+	bid: number;
+	ask: number;
+	auctionStartPrice: number;
+	auctionEndPrice: number;
+	stepSize: number;
+	oraclePrice: OraclePriceData;
+};
+
 export class Jitter {
 	auctionSubscriber: AuctionSubscriber;
+	slotSubscriber: SlotSubscriber;
 	driftClient: DriftClient;
 	jitProxyClient: JitProxyClient;
 	userStatsMap: UserStatsMap;
@@ -41,22 +60,31 @@ export class Jitter {
 
 	constructor({
 		auctionSubscriber,
+		slotSubscriber,
 		jitProxyClient,
 		driftClient,
 		userStatsMap,
 	}: {
 		driftClient: DriftClient;
+		slotSubscriber: SlotSubscriber;
 		auctionSubscriber: AuctionSubscriber;
 		jitProxyClient: JitProxyClient;
 		userStatsMap?: UserStatsMap;
 	}) {
 		this.auctionSubscriber = auctionSubscriber;
+		this.slotSubscriber = slotSubscriber;
 		this.driftClient = driftClient;
 		this.jitProxyClient = jitProxyClient;
-		this.userStatsMap = userStatsMap || new UserStatsMap(this.driftClient, {
-			type: 'polling',
-			accountLoader: new BulkAccountLoader(this.driftClient.connection, 'confirmed', 0),
-		});
+		this.userStatsMap =
+			userStatsMap ||
+			new UserStatsMap(this.driftClient, {
+				type: 'polling',
+				accountLoader: new BulkAccountLoader(
+					this.driftClient.connection,
+					'confirmed',
+					0
+				),
+			});
 	}
 
 	async subscribe(): Promise<void> {
@@ -92,6 +120,7 @@ export class Jitter {
 						takerKeyString,
 						order.orderId
 					);
+
 					if (this.onGoingAuctions.has(orderSignature)) {
 						continue;
 					}
@@ -100,6 +129,12 @@ export class Jitter {
 						if (!this.perpParams.has(order.marketIndex)) {
 							return;
 						}
+
+						console.log('New order signature: ', orderSignature);
+						console.log(
+							'ongoing auctions: ',
+							JSON.stringify(this.onGoingAuctions.keys())
+						);
 
 						const promise = this.createTryFill(
 							taker,
@@ -136,16 +171,64 @@ export class Jitter {
 		orderSignature: string
 	): () => Promise<void> {
 		return async () => {
-			let i = 0;
-			while (i < 10) {
-				const params = this.perpParams.get(order.marketIndex);
-				if (!params) {
+			const params = this.perpParams.get(order.marketIndex);
+			if (!params) {
+				this.onGoingAuctions.delete(orderSignature);
+				return;
+			}
+
+			const takerStats = await this.userStatsMap.mustGet(
+				taker.authority.toString()
+			);
+			const referrerInfo = takerStats.getReferrerInfo();
+
+			const {
+				slotsTilCross,
+				willCross,
+				bid,
+				ask,
+				auctionStartPrice,
+				auctionEndPrice,
+				stepSize,
+				oraclePrice,
+			} = this.getAuctionAndOrderDetails(order);
+
+			console.log(`
+				Taker wants to ${JSON.stringify(
+					order.direction
+				)}, order slot is ${order.slot.toNumber()},
+				My market: ${bid}@${ask},
+				Auction: ${auctionStartPrice} -> ${auctionEndPrice}, step size ${stepSize}
+				Current slot: ${
+					this.slotSubscriber.currentSlot
+				}, Order slot: ${order.slot.toNumber()},
+				Will cross?: ${willCross}
+				Slots to wait: ${slotsTilCross}. Target slot = ${
+				order.slot.toNumber() + slotsTilCross
+			}
+			`);
+
+			this.waitForSlotOrCrossOrExpiry(
+				order.slot.toNumber() + slotsTilCross,
+				order
+			).then(async (slot: number) => {
+				if (slot === -1) {
+					console.log('Auction expired without crossing');
 					this.onGoingAuctions.delete(orderSignature);
 					return;
 				}
 
-				const takerStats = await this.userStatsMap.mustGet(taker.authority.toString());
-				const referrerInfo = takerStats.getReferrerInfo();
+				const auctionPrice = convertToNumber(
+					getAuctionPrice(order, slot, oraclePrice.price),
+					PRICE_PRECISION
+				);
+				console.log(`
+					Expected auction price: ${auctionStartPrice + slotsTilCross * stepSize}
+					Actual auction price: ${auctionPrice}
+					-----------------
+					Looking for slot ${order.slot.toNumber() + slotsTilCross}
+					Got slot ${slot}
+				`);
 
 				console.log(`Trying to fill ${orderSignature}`);
 				try {
@@ -171,20 +254,108 @@ export class Jitter {
 				} catch (e) {
 					console.error(`Failed to fill ${orderSignature}`);
 					if (e.message.includes('0x1770') || e.message.includes('0x1771')) {
-						console.log('Order does not cross params yet, retrying');
+						console.log('Order does not cross params yet');
 					} else if (e.message.includes('0x1793')) {
-						console.log('Oracle invalid, retrying');
+						console.log('Oracle invalid');
 					} else {
 						await sleep(10000);
 						this.onGoingAuctions.delete(orderSignature);
 						return;
 					}
 				}
-				i++;
-			}
-
+			});
 			this.onGoingAuctions.delete(orderSignature);
 		};
+	}
+
+	getAuctionAndOrderDetails(order: Order): AuctionAndOrderDetails {
+		// Find number of slots until the order is expected to be in cross
+		const params = this.perpParams.get(order.marketIndex);
+		const oraclePrice = this.driftClient.getOracleDataForPerpMarket(
+			order.marketIndex
+		);
+		const makerOrderDir = isVariant(order.direction, 'long') ? 'sell' : 'buy';
+
+		const auctionStartPrice = convertToNumber(
+			isVariant(order.orderType, 'oracle')
+				? oraclePrice.price.add(order.auctionStartPrice)
+				: order.auctionStartPrice,
+			PRICE_PRECISION
+		);
+		const auctionEndPrice = convertToNumber(
+			isVariant(order.orderType, 'oracle')
+				? oraclePrice.price.add(order.auctionEndPrice)
+				: order.auctionEndPrice,
+			PRICE_PRECISION
+		);
+
+		const bid = convertToNumber(
+			oraclePrice.price.sub(params.bid),
+			PRICE_PRECISION
+		);
+		const ask = convertToNumber(
+			oraclePrice.price.add(params.ask),
+			PRICE_PRECISION
+		);
+
+		const stepSize =
+			(auctionEndPrice - auctionStartPrice) / (order.auctionDuration - 1);
+		let slotsTilCross = 0;
+		let willCross = false;
+		while (slotsTilCross < order.auctionDuration) {
+			if (makerOrderDir === 'buy') {
+				if (auctionStartPrice + stepSize * slotsTilCross <= bid) {
+					willCross = true;
+					break;
+				}
+			} else {
+				if (auctionStartPrice + stepSize * slotsTilCross >= ask) {
+					willCross = true;
+					break;
+				}
+			}
+			slotsTilCross++;
+		}
+
+		return {
+			slotsTilCross,
+			willCross,
+			bid,
+			ask,
+			auctionStartPrice,
+			auctionEndPrice,
+			stepSize,
+			oraclePrice,
+		};
+	}
+
+	async waitForSlotOrCrossOrExpiry(
+		targetSlot: number,
+		order: Order
+	): Promise<number> {
+		const auctionEndSlot = order.auctionDuration + order.slot.toNumber();
+		return new Promise((resolve) => {
+			// Immediately return if we are past target slot
+
+			// Otherwise listen for new slots in case we hit the target slot
+			this.slotSubscriber.eventEmitter.on('newSlot', (slot) => {
+				if (slot >= targetSlot) {
+					resolve(slot);
+				}
+			});
+
+			// Update target slot as the bid/ask and the oracle changes
+			setInterval(async () => {
+				if (this.slotSubscriber.currentSlot >= auctionEndSlot) {
+					resolve(-1);
+				}
+
+				const currentDetails = this.getAuctionAndOrderDetails(order);
+				if (currentDetails.willCross) {
+					targetSlot = order.slot.toNumber() + currentDetails.slotsTilCross;
+				}
+			}, 100);
+		});
 	}
 
 	getOrderSignatures(takerKey: string, orderId: number): string {
