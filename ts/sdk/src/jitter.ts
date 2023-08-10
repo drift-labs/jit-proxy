@@ -295,7 +295,7 @@ export class Jitter {
 						});
 
 						console.log(`Filled ${orderSignature} txSig ${txSig}`);
-						await sleep(1000);
+						await sleep(3000);
 						this.onGoingAuctions.delete(orderSignature);
 						return;
 					} catch (e) {
@@ -305,7 +305,7 @@ export class Jitter {
 						} else if (e.message.includes('0x1793')) {
 							console.log('Oracle invalid');
 						} else {
-							await sleep(1000);
+							await sleep(3000);
 							this.onGoingAuctions.delete(orderSignature);
 							return;
 						}
