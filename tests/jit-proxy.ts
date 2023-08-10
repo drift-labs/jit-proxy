@@ -1,6 +1,6 @@
-import * as anchor from '@coral-xyz/anchor';
-import { Program } from '@coral-xyz/anchor';
-import { JitProxy } from '../ts/sdk/src/types/jit_proxy';
+import * as anchor from '@project-serum/anchor';
+import { Program } from '@project-serum/anchor';
+import { JitProxy } from '../target/types/jit_proxy';
 
 describe('jit-proxy', () => {
 	// Configure the client to use the local cluster.
