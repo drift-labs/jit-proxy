@@ -70,13 +70,21 @@ pub mod jit_proxy {
         match maker_direction {
             PositionDirection::Long => {
                 if taker_price > maker_worst_price {
-                    msg!("taker price {} > worst bid {}", taker_price, maker_worst_price);
+                    msg!(
+                        "taker price {} > worst bid {}",
+                        taker_price,
+                        maker_worst_price
+                    );
                     return Err(ErrorCode::BidNotCrossed.into());
                 }
             }
             PositionDirection::Short => {
                 if taker_price < maker_worst_price {
-                    msg!("taker price {} < worst ask {}", taker_price, maker_worst_price);
+                    msg!(
+                        "taker price {} < worst ask {}",
+                        taker_price,
+                        maker_worst_price
+                    );
                     return Err(ErrorCode::AskNotCrossed.into());
                 }
             }
