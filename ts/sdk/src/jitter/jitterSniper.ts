@@ -124,7 +124,7 @@ export class JitterSniper extends BaseJitter {
 					? this.perpParams.get(order.marketIndex)
 					: this.spotParams.get(order.marketIndex);
 				const bid = isVariant(params.priceType, 'oracle')
-					? convertToNumber(oraclePrice.price.sub(params.bid), PRICE_PRECISION)
+					? convertToNumber(oraclePrice.price.add(params.bid), PRICE_PRECISION)
 					: convertToNumber(params.bid, PRICE_PRECISION);
 				const ask = isVariant(params.priceType, 'oracle')
 					? convertToNumber(oraclePrice.price.add(params.ask), PRICE_PRECISION)
@@ -223,7 +223,7 @@ export class JitterSniper extends BaseJitter {
 		);
 
 		const bid = isVariant(params.priceType, 'oracle')
-			? convertToNumber(oraclePrice.price.sub(params.bid), PRICE_PRECISION)
+			? convertToNumber(oraclePrice.price.add(params.bid), PRICE_PRECISION)
 			: convertToNumber(params.bid, PRICE_PRECISION);
 		const ask = isVariant(params.priceType, 'oracle')
 			? convertToNumber(oraclePrice.price.add(params.ask), PRICE_PRECISION)
@@ -286,6 +286,12 @@ export class JitterSniper extends BaseJitter {
 		const auctionEndSlot = order.auctionDuration + order.slot.toNumber();
 		let currentDetails: AuctionAndOrderDetails = initialDetails;
 		let willCross = initialDetails.willCross;
+		if (this.slotSubscriber.currentSlot > auctionEndSlot) {
+			return new Promise((resolve) =>
+				resolve({ slot: -1, updatedDetails: currentDetails })
+			);
+		}
+
 		return new Promise((resolve) => {
 			// Immediately return if we are past target slot
 
