@@ -21,6 +21,23 @@ For ```JitterShotgun```, orders are sent immediately when detecting a new eligib
 
 For ```JitterSniper```, orders are sent only when it detects that an order might cross the bid/ask of the ```JitParams```, waiting until the right slot, before sending up to 3 orders (retrying on errors). It will not send orders if the price of the order does not cross the bid/ask during the auction, unlike the JitterShotgun, which will immediately attempt.
 
+## Jit Params
+
+Type definition for the JitParmas is below:
+
+```
+export type JitParams = {
+	bid: BN;
+	ask: BN;
+	minPosition: BN;
+	maxPosition: BN;
+	priceType: PriceType;
+	subAccountId?: number;
+};
+```
+
+PriceType options are ```ORACLE``` and ```LIMIT```. Limit price type is the BN representaiton of an absolute price; i.e., price type of LIMIT and a market of bid: 10, ask: 11 means your market is 10@11. Oracle price types are offsets relative to the oralce price for a given slot. They are always added to the oracle price, so if the oracle price is 10.5, to get a market of 10@11 when price type is oracle, bid and ask are -0.5 and 0.5 respectively (Remember that bid and ask are of BN type, this example is for illustration purposes only. Remember to use BN math operations).
+
 ## Example set up
 
 Example set up for the JitterSniper (assuming parameters are already initialized/subscribed to). JitterShotgun is instantiated and initialized in a similar manner.
