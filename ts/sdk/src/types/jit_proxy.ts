@@ -49,6 +49,26 @@ export type JitProxy = {
 					};
 				}
 			];
+		},
+		{
+			name: 'checkOrderConstraints';
+			accounts: [
+				{
+					name: 'user';
+					isMut: false;
+					isSigner: false;
+				}
+			];
+			args: [
+				{
+					name: 'constraints';
+					type: {
+						vec: {
+							defined: 'OrderConstraint';
+						};
+					};
+				}
+			];
 		}
 	];
 	types: [
@@ -95,6 +115,32 @@ export type JitProxy = {
 			};
 		},
 		{
+			name: 'OrderConstraint';
+			type: {
+				kind: 'struct';
+				fields: [
+					{
+						name: 'maxPosition';
+						type: 'i64';
+					},
+					{
+						name: 'minPosition';
+						type: 'i64';
+					},
+					{
+						name: 'marketIndex';
+						type: 'u16';
+					},
+					{
+						name: 'marketType';
+						type: {
+							defined: 'MarketType';
+						};
+					}
+				];
+			};
+		},
+		{
 			name: 'PostOnlyParam';
 			type: {
 				kind: 'enum';
@@ -124,6 +170,20 @@ export type JitProxy = {
 					}
 				];
 			};
+		},
+		{
+			name: 'MarketType';
+			type: {
+				kind: 'enum';
+				variants: [
+					{
+						name: 'Perp';
+					},
+					{
+						name: 'Spot';
+					}
+				];
+			};
 		}
 	];
 	errors: [
@@ -141,6 +201,11 @@ export type JitProxy = {
 			code: 6002;
 			name: 'TakerOrderNotFound';
 			msg: 'TakerOrderNotFound';
+		},
+		{
+			code: 6003;
+			name: 'OrderSizeBreached';
+			msg: 'OrderSizeBreached';
 		}
 	];
 };
@@ -197,6 +262,26 @@ export const IDL: JitProxy = {
 				},
 			],
 		},
+		{
+			name: 'checkOrderConstraints',
+			accounts: [
+				{
+					name: 'user',
+					isMut: false,
+					isSigner: false,
+				},
+			],
+			args: [
+				{
+					name: 'constraints',
+					type: {
+						vec: {
+							defined: 'OrderConstraint',
+						},
+					},
+				},
+			],
+		},
 	],
 	types: [
 		{
@@ -242,6 +327,32 @@ export const IDL: JitProxy = {
 			},
 		},
 		{
+			name: 'OrderConstraint',
+			type: {
+				kind: 'struct',
+				fields: [
+					{
+						name: 'maxPosition',
+						type: 'i64',
+					},
+					{
+						name: 'minPosition',
+						type: 'i64',
+					},
+					{
+						name: 'marketIndex',
+						type: 'u16',
+					},
+					{
+						name: 'marketType',
+						type: {
+							defined: 'MarketType',
+						},
+					},
+				],
+			},
+		},
+		{
 			name: 'PostOnlyParam',
 			type: {
 				kind: 'enum',
@@ -272,6 +383,20 @@ export const IDL: JitProxy = {
 				],
 			},
 		},
+		{
+			name: 'MarketType',
+			type: {
+				kind: 'enum',
+				variants: [
+					{
+						name: 'Perp',
+					},
+					{
+						name: 'Spot',
+					},
+				],
+			},
+		},
 	],
 	errors: [
 		{
@@ -288,6 +413,11 @@ export const IDL: JitProxy = {
 			code: 6002,
 			name: 'TakerOrderNotFound',
 			msg: 'TakerOrderNotFound',
+		},
+		{
+			code: 6003,
+			name: 'OrderSizeBreached',
+			msg: 'OrderSizeBreached',
 		},
 	],
 };

@@ -10,7 +10,7 @@ use drift::math::safe_math::SafeMath;
 use drift::program::Drift;
 use drift::state::perp_market_map::MarketSet;
 use drift::state::state::State;
-use drift::state::user::{MarketType, OrderTriggerCondition, OrderType};
+use drift::state::user::{MarketType as DriftMarketType, OrderTriggerCondition, OrderType};
 use drift::state::user::{User, UserStats};
 
 declare_id!("J1TnP8zvVxbtF5KFp5xRmWuvG9McnhzmBd9XGfCyuxFP");
@@ -50,7 +50,7 @@ pub mod jit_proxy {
             None,
         )?;
 
-        let (oracle_price, tick_size) = if market_type == MarketType::Perp {
+        let (oracle_price, tick_size) = if market_type == DriftMarketType::Perp {
             let perp_market = perp_market_map.get_ref(&market_index)?;
             let oracle_price = oracle_map.get_price_data(&perp_market.amm.oracle)?.price;
 
@@ -92,7 +92,7 @@ pub mod jit_proxy {
         let maker_price = taker_price;
 
         let taker_base_asset_amount_unfilled = taker_order.get_base_asset_amount_unfilled(None)?;
-        let maker_existing_position = if market_type == MarketType::Perp {
+        let maker_existing_position = if market_type == DriftMarketType::Perp {
             let perp_market = perp_market_map.get_ref(&market_index)?;
             let perp_position = maker.get_perp_position(market_index);
             match perp_position {
@@ -167,6 +167,68 @@ pub mod jit_proxy {
 
         Ok(())
     }
+
+    pub fn check_order_constraints<'info>(
+        ctx: Context<'_, '_, '_, 'info, CheckOrderConstraints<'info>>,
+        constraints: Vec<OrderConstraint>,
+    ) -> Result<()> {
+        let clock = Clock::get()?;
+        let slot = clock.slot;
+
+        let user = ctx.accounts.user.load()?;
+
+        let remaining_accounts_iter = &mut ctx.remaining_accounts.iter().peekable();
+        let AccountMaps {
+            perp_market_map,
+            spot_market_map,
+            mut oracle_map,
+        } = load_maps(
+            remaining_accounts_iter,
+            &MarketSet::new(),
+            &MarketSet::new(),
+            slot,
+            None,
+        )?;
+
+        for constraint in constraints.iter() {
+            if constraint.market_type == MarketType::Spot {
+                let spot_market = spot_market_map.get_ref(&constraint.market_index)?;
+                let spot_position = match user.get_spot_position(constraint.market_index) {
+                    Ok(spot_position) => spot_position,
+                    Err(_) => continue,
+                };
+
+                let signed_token_amount = spot_position
+                    .get_signed_token_amount(&spot_market)?
+                    .cast::<i64>()?;
+
+                constraint.check(
+                    signed_token_amount,
+                    spot_position.open_bids,
+                    spot_position.open_asks,
+                )?;
+            } else {
+                let perp_market = perp_market_map.get_ref(&constraint.market_index)?;
+                let perp_position = match user.get_perp_position(constraint.market_index) {
+                    Ok(perp_position) => perp_position,
+                    Err(_) => continue,
+                };
+
+                let oracle_price = oracle_map.get_price_data(&perp_market.amm.oracle)?.price;
+
+                let settled_perp_position =
+                    perp_position.simulate_settled_lp_position(&perp_market, oracle_price)?;
+
+                constraint.check(
+                    settled_perp_position.base_asset_amount,
+                    settled_perp_position.open_bids,
+                    settled_perp_position.open_asks,
+                )?;
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -237,6 +299,73 @@ pub enum PriceType {
     Oracle,
 }
 
+#[derive(Accounts)]
+pub struct CheckOrderConstraints<'info> {
+    pub user: AccountLoader<'info, User>,
+}
+
+#[derive(Debug, Clone, Copy, AnchorSerialize, AnchorDeserialize, PartialEq, Eq)]
+pub struct OrderConstraint {
+    pub max_position: i64,
+    pub min_position: i64,
+    pub market_index: u16,
+    pub market_type: MarketType,
+}
+
+impl OrderConstraint {
+    pub fn check(&self, current_position: i64, open_bids: i64, open_asks: i64) -> Result<()> {
+        let max_long = current_position.safe_add(open_bids)?;
+
+        if max_long > self.max_position {
+            msg!(
+                "market index {} market type {:?}",
+                self.market_index,
+                self.market_type
+            );
+            msg!(
+                "max long {} current position {} open bids {}",
+                max_long,
+                current_position,
+                open_bids
+            );
+            return Err(ErrorCode::OrderSizeBreached.into());
+        }
+
+        let max_short = current_position.safe_add(open_asks)?;
+        if max_short < self.min_position {
+            msg!(
+                "market index {} market type {:?}",
+                self.market_index,
+                self.market_type
+            );
+            msg!(
+                "max short {} current position {} open asks {}",
+                max_short,
+                current_position,
+                open_asks
+            );
+            return Err(ErrorCode::OrderSizeBreached.into());
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy, BorshSerialize, BorshDeserialize, PartialEq, Debug, Eq)]
+pub enum MarketType {
+    Perp,
+    Spot,
+}
+
+impl MarketType {
+    pub fn to_drift_param(self) -> DriftMarketType {
+        match self {
+            MarketType::Spot => DriftMarketType::Spot,
+            MarketType::Perp => DriftMarketType::Perp,
+        }
+    }
+}
+
 #[error_code]
 #[derive(PartialEq, Eq)]
 pub enum ErrorCode {
@@ -246,6 +375,8 @@ pub enum ErrorCode {
     AskNotCrossed,
     #[msg("TakerOrderNotFound")]
     TakerOrderNotFound,
+    #[msg("OrderSizeBreached")]
+    OrderSizeBreached,
 }
 
 fn place_and_make<'info>(
@@ -266,7 +397,7 @@ fn place_and_make<'info>(
     let cpi_context = CpiContext::new(drift_program, cpi_accounts)
         .with_remaining_accounts(ctx.remaining_accounts.into());
 
-    if order_params.market_type == MarketType::Perp {
+    if order_params.market_type == DriftMarketType::Perp {
         drift::cpi::place_and_make_perp_order(cpi_context, order_params, taker_order_id)?;
     } else {
         drift::cpi::place_and_make_spot_order(cpi_context, order_params, taker_order_id, None)?;

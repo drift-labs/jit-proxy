@@ -2,6 +2,7 @@ import {
 	BN,
 	DriftClient,
 	isVariant,
+	MarketType,
 	PostOnlyParams,
 	QUOTE_SPOT_MARKET_INDEX,
 	ReferrerInfo,
@@ -32,6 +33,13 @@ export class PriceType {
 	static readonly LIMIT = { limit: {} };
 	static readonly ORACLE = { oracle: {} };
 }
+
+export type OrderConstraint = {
+	maxPosition: BN;
+	minPosition: BN;
+	marketIndex: number;
+	marketType: MarketType;
+};
 
 export class JitProxyClient {
 	private driftClient: DriftClient;
@@ -131,6 +139,43 @@ export class JitProxyClient {
 				user: await this.driftClient.getUserAccountPublicKey(subAccountId),
 				userStats: this.driftClient.getUserStatsAccountPublicKey(),
 				driftProgram: this.driftClient.program.programId,
+			})
+			.remainingAccounts(remainingAccounts)
+			.instruction();
+	}
+
+	public async getCheckOrderConstraintIx({
+		subAccountId,
+		orderConstraints,
+	}: {
+		subAccountId: number;
+		orderConstraints: OrderConstraint[];
+	}): Promise<TransactionInstruction> {
+		subAccountId =
+			subAccountId !== undefined
+				? subAccountId
+				: this.driftClient.activeSubAccountId;
+
+		const readablePerpMarketIndex = [];
+		const readableSpotMarketIndexes = [];
+		for (const orderConstraint of orderConstraints) {
+			if (isVariant(orderConstraint.marketType, 'perp')) {
+				readablePerpMarketIndex.push(orderConstraint.marketIndex);
+			} else {
+				readableSpotMarketIndexes.push(orderConstraint.marketIndex);
+			}
+		}
+
+		const remainingAccounts = this.driftClient.getRemainingAccounts({
+			userAccounts: [this.driftClient.getUserAccount(subAccountId)],
+			readableSpotMarketIndexes,
+			readablePerpMarketIndex,
+		});
+
+		return this.program.methods
+			.checkOrderConstraints(orderConstraints)
+			.accounts({
+				user: await this.driftClient.getUserAccountPublicKey(subAccountId),
 			})
 			.remainingAccounts(remainingAccounts)
 			.instruction();
