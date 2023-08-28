@@ -1,6 +1,6 @@
 {
   "name": "@drift-labs/jit-proxy",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "dependencies": {
     "@coral-xyz/anchor": "^0.26.0",
     "@solana/web3.js": "1.73.2",
