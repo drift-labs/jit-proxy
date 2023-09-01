@@ -1,5 +1,5 @@
 export type JitProxy = {
-	version: '0.10.1';
+	version: '0.10.2';
 	name: 'jit_proxy';
 	instructions: [
 		{
@@ -211,7 +211,7 @@ export type JitProxy = {
 };
 
 export const IDL: JitProxy = {
-	version: '0.10.1',
+	version: '0.10.2',
 	name: 'jit_proxy',
 	instructions: [
 		{

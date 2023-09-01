@@ -20,7 +20,7 @@
         "prettier": "^2.6.2",
         "@coral-xyz/anchor": "^0.26.0",
         "@solana/web3.js": "1.73.2",
-        "@drift-labs/sdk": "^2.37.1-beta.2",
+        "@drift-labs/sdk": "^2.38.1-beta.7",
         "husky": "^8.0.0",
         "@typescript-eslint/eslint-plugin": "^4.28.0",
         "@typescript-eslint/parser": "^4.28.0",
