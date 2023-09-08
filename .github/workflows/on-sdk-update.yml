@@ -32,13 +32,19 @@ jobs:
 
     - name: Install dependencies
       run: yarn
+      working-directory: ts/sdk
 
     - name: Add specific version of sdk
       run: yarn add @drift-labs/sdk@${{ steps.determine-sdk-version.outputs.version }}
+      working-directory: ts/sdk
 
     - run: yarn build
+      working-directory: ts/sdk
+
     - name: Update package version
       run: npm version patch
+      working-directory: ts/sdk
+
     - name: Git commit
       id: publish-jit-sdk
       run: |
@@ -49,10 +55,14 @@ jobs:
         git commit --allow-empty -m "sdk: release v$VERSION"
         git push origin HEAD
         echo "::set-output name=jit-version::$VERSION"
+      working-directory: ts/sdk
+
     - name: Publish to npm
       run: npm publish --access=public
+      working-directory: ts/sdk
       env:
         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
 
     - name: Emit dispatch event
       run: |
