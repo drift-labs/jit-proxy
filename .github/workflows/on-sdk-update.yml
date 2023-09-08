@@ -48,7 +48,7 @@ jobs:
     - name: Git commit
       id: publish-jit-sdk
       run: |
-        VERSION=$(node -e "console.log(require('./ts/sdk/package.json').version);")
+        VERSION=$(node -e "console.log(require('./package.json').version);")
         git config user.name "GitHub Actions"
         git config user.email 41898282+github-actions[bot]@users.noreply.github.com
         git add -A
