@@ -25,4 +25,11 @@ pub mod jit_proxy {
     ) -> Result<()> {
         instructions::check_order_constraints(ctx, constraints)
     }
+
+    pub fn arb_perp<'info>(
+        ctx: Context<'_, '_, '_, 'info, ArbPerp<'info>>,
+        market_index: u16,
+    ) -> Result<()> {
+        instructions::arb_perp(ctx, market_index)
+    }
 }

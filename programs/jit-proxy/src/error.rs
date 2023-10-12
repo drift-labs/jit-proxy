@@ -11,4 +11,12 @@ pub enum ErrorCode {
     TakerOrderNotFound,
     #[msg("OrderSizeBreached")]
     OrderSizeBreached,
+    #[msg("NoBestBid")]
+    NoBestBid,
+    #[msg("NoBestAsk")]
+    NoBestAsk,
+    #[msg("NoArbOpportunity")]
+    NoArbOpportunity,
+    #[msg("UnprofitableArb")]
+    UnprofitableArb,
 }

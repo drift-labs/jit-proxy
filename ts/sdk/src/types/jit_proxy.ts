@@ -206,6 +206,26 @@ export type JitProxy = {
 			code: 6003;
 			name: 'OrderSizeBreached';
 			msg: 'OrderSizeBreached';
+		},
+		{
+			code: 6004;
+			name: 'NoBestBid';
+			msg: 'NoBestBid';
+		},
+		{
+			code: 6005;
+			name: 'NoBestAsk';
+			msg: 'NoBestAsk';
+		},
+		{
+			code: 6006;
+			name: 'NoArbOpportunity';
+			msg: 'NoArbOpportunity';
+		},
+		{
+			code: 6007;
+			name: 'UnprofitableArb';
+			msg: 'UnprofitableArb';
 		}
 	];
 };
@@ -418,6 +438,26 @@ export const IDL: JitProxy = {
 			code: 6003,
 			name: 'OrderSizeBreached',
 			msg: 'OrderSizeBreached',
+		},
+		{
+			code: 6004,
+			name: 'NoBestBid',
+			msg: 'NoBestBid',
+		},
+		{
+			code: 6005,
+			name: 'NoBestAsk',
+			msg: 'NoBestAsk',
+		},
+		{
+			code: 6006,
+			name: 'NoArbOpportunity',
+			msg: 'NoArbOpportunity',
+		},
+		{
+			code: 6007,
+			name: 'UnprofitableArb',
+			msg: 'UnprofitableArb',
 		},
 	],
 };
