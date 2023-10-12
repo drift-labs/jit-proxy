@@ -1,5 +1,5 @@
 export type JitProxy = {
-	version: '0.10.3';
+	version: '0.10.2';
 	name: 'jit_proxy';
 	instructions: [
 		{
@@ -73,6 +73,32 @@ export type JitProxy = {
 	];
 	types: [
 		{
+			name: 'OrderConstraint';
+			type: {
+				kind: 'struct';
+				fields: [
+					{
+						name: 'maxPosition';
+						type: 'i64';
+					},
+					{
+						name: 'minPosition';
+						type: 'i64';
+					},
+					{
+						name: 'marketIndex';
+						type: 'u16';
+					},
+					{
+						name: 'marketType';
+						type: {
+							defined: 'MarketType';
+						};
+					}
+				];
+			};
+		},
+		{
 			name: 'JitParams';
 			type: {
 				kind: 'struct';
@@ -109,32 +135,6 @@ export type JitProxy = {
 							option: {
 								defined: 'PostOnlyParam';
 							};
-						};
-					}
-				];
-			};
-		},
-		{
-			name: 'OrderConstraint';
-			type: {
-				kind: 'struct';
-				fields: [
-					{
-						name: 'maxPosition';
-						type: 'i64';
-					},
-					{
-						name: 'minPosition';
-						type: 'i64';
-					},
-					{
-						name: 'marketIndex';
-						type: 'u16';
-					},
-					{
-						name: 'marketType';
-						type: {
-							defined: 'MarketType';
 						};
 					}
 				];
@@ -211,7 +211,7 @@ export type JitProxy = {
 };
 
 export const IDL: JitProxy = {
-	version: '0.10.3',
+	version: '0.10.2',
 	name: 'jit_proxy',
 	instructions: [
 		{
@@ -285,6 +285,32 @@ export const IDL: JitProxy = {
 	],
 	types: [
 		{
+			name: 'OrderConstraint',
+			type: {
+				kind: 'struct',
+				fields: [
+					{
+						name: 'maxPosition',
+						type: 'i64',
+					},
+					{
+						name: 'minPosition',
+						type: 'i64',
+					},
+					{
+						name: 'marketIndex',
+						type: 'u16',
+					},
+					{
+						name: 'marketType',
+						type: {
+							defined: 'MarketType',
+						},
+					},
+				],
+			},
+		},
+		{
 			name: 'JitParams',
 			type: {
 				kind: 'struct',
@@ -321,32 +347,6 @@ export const IDL: JitProxy = {
 							option: {
 								defined: 'PostOnlyParam',
 							},
-						},
-					},
-				],
-			},
-		},
-		{
-			name: 'OrderConstraint',
-			type: {
-				kind: 'struct',
-				fields: [
-					{
-						name: 'maxPosition',
-						type: 'i64',
-					},
-					{
-						name: 'minPosition',
-						type: 'i64',
-					},
-					{
-						name: 'marketIndex',
-						type: 'u16',
-					},
-					{
-						name: 'marketType',
-						type: {
-							defined: 'MarketType',
 						},
 					},
 				],
