@@ -69,6 +69,42 @@ export type JitProxy = {
 					};
 				}
 			];
+		},
+		{
+			name: 'arbPerp';
+			accounts: [
+				{
+					name: 'state';
+					isMut: false;
+					isSigner: false;
+				},
+				{
+					name: 'user';
+					isMut: true;
+					isSigner: false;
+				},
+				{
+					name: 'userStats';
+					isMut: true;
+					isSigner: false;
+				},
+				{
+					name: 'authority';
+					isMut: false;
+					isSigner: true;
+				},
+				{
+					name: 'driftProgram';
+					isMut: false;
+					isSigner: false;
+				}
+			];
+			args: [
+				{
+					name: 'marketIndex';
+					type: 'u16';
+				}
+			];
 		}
 	];
 	types: [
@@ -299,6 +335,42 @@ export const IDL: JitProxy = {
 							defined: 'OrderConstraint',
 						},
 					},
+				},
+			],
+		},
+		{
+			name: 'arbPerp',
+			accounts: [
+				{
+					name: 'state',
+					isMut: false,
+					isSigner: false,
+				},
+				{
+					name: 'user',
+					isMut: true,
+					isSigner: false,
+				},
+				{
+					name: 'userStats',
+					isMut: true,
+					isSigner: false,
+				},
+				{
+					name: 'authority',
+					isMut: false,
+					isSigner: true,
+				},
+				{
+					name: 'driftProgram',
+					isMut: false,
+					isSigner: false,
+				},
+			],
+			args: [
+				{
+					name: 'marketIndex',
+					type: 'u16',
 				},
 			],
 		},

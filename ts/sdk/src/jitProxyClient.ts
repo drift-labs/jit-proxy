@@ -2,6 +2,7 @@ import {
 	BN,
 	DriftClient,
 	isVariant,
+	MakerInfo,
 	MarketType,
 	PostOnlyParams,
 	QUOTE_SPOT_MARKET_INDEX,
@@ -176,6 +177,60 @@ export class JitProxyClient {
 			.checkOrderConstraints(orderConstraints)
 			.accounts({
 				user: await this.driftClient.getUserAccountPublicKey(subAccountId),
+			})
+			.remainingAccounts(remainingAccounts)
+			.instruction();
+	}
+
+	public async arbPerp(
+		params: {
+			makerInfos: MakerInfo[];
+			marketIndex: number;
+		},
+		txParams?: TxParams
+	): Promise<TxSigAndSlot> {
+		const ix = await this.getArbPerpIx(params);
+		const tx = await this.driftClient.buildTransaction([ix], txParams);
+		return await this.driftClient.sendTransaction(tx);
+	}
+
+	public async getArbPerpIx({
+		makerInfos,
+		marketIndex,
+	}: {
+		makerInfos: MakerInfo[];
+		marketIndex: number;
+	}): Promise<TransactionInstruction> {
+		const userAccounts = [this.driftClient.getUserAccount()];
+		for (const makerInfo of makerInfos) {
+			userAccounts.push(makerInfo.makerUserAccount);
+		}
+
+		const remainingAccounts = this.driftClient.getRemainingAccounts({
+			userAccounts,
+			writablePerpMarketIndexes: [marketIndex],
+		});
+
+		for (const makerInfo of makerInfos) {
+			remainingAccounts.push({
+				pubkey: makerInfo.maker,
+				isWritable: true,
+				isSigner: false,
+			});
+			remainingAccounts.push({
+				pubkey: makerInfo.makerStats,
+				isWritable: true,
+				isSigner: false,
+			});
+		}
+
+		return this.program.methods
+			.arbPerp(marketIndex)
+			.accounts({
+				state: await this.driftClient.getStatePublicKey(),
+				user: await this.driftClient.getUserAccountPublicKey(),
+				userStats: this.driftClient.getUserStatsAccountPublicKey(),
+				driftProgram: this.driftClient.program.programId,
 			})
 			.remainingAccounts(remainingAccounts)
 			.instruction();
