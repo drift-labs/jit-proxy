@@ -14,8 +14,8 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = { git = "https://github.com/drift-labs/anchor.git", rev = "ed950fe", version = "0.26.0" }
-anchor-spl = { git = "https://github.com/drift-labs/anchor.git", rev = "ed950fe", version = "0.26.0" }
-drift = { git = "https://github.com/drift-labs/protocol-v2.git", rev = "099cbca", features = ["cpi", "mainnet-beta"]}
+anchor-lang = "0.27.0"
+anchor-spl = "0.27.0"
+drift = { git = "https://github.com/drift-labs/protocol-v2.git", rev = "e5cdd4", features = ["cpi", "mainnet-beta"]}
 bytemuck = { version = "1.4.0" }
 static_assertions = "1.1.0"

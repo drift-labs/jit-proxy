@@ -1,5 +1,5 @@
 export type JitProxy = {
-	version: '0.10.3';
+	version: '0.10.2';
 	name: 'jit_proxy';
 	instructions: [
 		{
@@ -69,9 +69,71 @@ export type JitProxy = {
 					};
 				}
 			];
+		},
+		{
+			name: 'arbPerp';
+			accounts: [
+				{
+					name: 'state';
+					isMut: false;
+					isSigner: false;
+				},
+				{
+					name: 'user';
+					isMut: true;
+					isSigner: false;
+				},
+				{
+					name: 'userStats';
+					isMut: true;
+					isSigner: false;
+				},
+				{
+					name: 'authority';
+					isMut: false;
+					isSigner: true;
+				},
+				{
+					name: 'driftProgram';
+					isMut: false;
+					isSigner: false;
+				}
+			];
+			args: [
+				{
+					name: 'marketIndex';
+					type: 'u16';
+				}
+			];
 		}
 	];
 	types: [
+		{
+			name: 'OrderConstraint';
+			type: {
+				kind: 'struct';
+				fields: [
+					{
+						name: 'maxPosition';
+						type: 'i64';
+					},
+					{
+						name: 'minPosition';
+						type: 'i64';
+					},
+					{
+						name: 'marketIndex';
+						type: 'u16';
+					},
+					{
+						name: 'marketType';
+						type: {
+							defined: 'MarketType';
+						};
+					}
+				];
+			};
+		},
 		{
 			name: 'JitParams';
 			type: {
@@ -109,32 +171,6 @@ export type JitProxy = {
 							option: {
 								defined: 'PostOnlyParam';
 							};
-						};
-					}
-				];
-			};
-		},
-		{
-			name: 'OrderConstraint';
-			type: {
-				kind: 'struct';
-				fields: [
-					{
-						name: 'maxPosition';
-						type: 'i64';
-					},
-					{
-						name: 'minPosition';
-						type: 'i64';
-					},
-					{
-						name: 'marketIndex';
-						type: 'u16';
-					},
-					{
-						name: 'marketType';
-						type: {
-							defined: 'MarketType';
 						};
 					}
 				];
@@ -206,12 +242,32 @@ export type JitProxy = {
 			code: 6003;
 			name: 'OrderSizeBreached';
 			msg: 'OrderSizeBreached';
+		},
+		{
+			code: 6004;
+			name: 'NoBestBid';
+			msg: 'NoBestBid';
+		},
+		{
+			code: 6005;
+			name: 'NoBestAsk';
+			msg: 'NoBestAsk';
+		},
+		{
+			code: 6006;
+			name: 'NoArbOpportunity';
+			msg: 'NoArbOpportunity';
+		},
+		{
+			code: 6007;
+			name: 'UnprofitableArb';
+			msg: 'UnprofitableArb';
 		}
 	];
 };
 
 export const IDL: JitProxy = {
-	version: '0.10.3',
+	version: '0.10.2',
 	name: 'jit_proxy',
 	instructions: [
 		{
@@ -282,8 +338,70 @@ export const IDL: JitProxy = {
 				},
 			],
 		},
+		{
+			name: 'arbPerp',
+			accounts: [
+				{
+					name: 'state',
+					isMut: false,
+					isSigner: false,
+				},
+				{
+					name: 'user',
+					isMut: true,
+					isSigner: false,
+				},
+				{
+					name: 'userStats',
+					isMut: true,
+					isSigner: false,
+				},
+				{
+					name: 'authority',
+					isMut: false,
+					isSigner: true,
+				},
+				{
+					name: 'driftProgram',
+					isMut: false,
+					isSigner: false,
+				},
+			],
+			args: [
+				{
+					name: 'marketIndex',
+					type: 'u16',
+				},
+			],
+		},
 	],
 	types: [
+		{
+			name: 'OrderConstraint',
+			type: {
+				kind: 'struct',
+				fields: [
+					{
+						name: 'maxPosition',
+						type: 'i64',
+					},
+					{
+						name: 'minPosition',
+						type: 'i64',
+					},
+					{
+						name: 'marketIndex',
+						type: 'u16',
+					},
+					{
+						name: 'marketType',
+						type: {
+							defined: 'MarketType',
+						},
+					},
+				],
+			},
+		},
 		{
 			name: 'JitParams',
 			type: {
@@ -321,32 +439,6 @@ export const IDL: JitProxy = {
 							option: {
 								defined: 'PostOnlyParam',
 							},
-						},
-					},
-				],
-			},
-		},
-		{
-			name: 'OrderConstraint',
-			type: {
-				kind: 'struct',
-				fields: [
-					{
-						name: 'maxPosition',
-						type: 'i64',
-					},
-					{
-						name: 'minPosition',
-						type: 'i64',
-					},
-					{
-						name: 'marketIndex',
-						type: 'u16',
-					},
-					{
-						name: 'marketType',
-						type: {
-							defined: 'MarketType',
 						},
 					},
 				],
@@ -418,6 +510,26 @@ export const IDL: JitProxy = {
 			code: 6003,
 			name: 'OrderSizeBreached',
 			msg: 'OrderSizeBreached',
+		},
+		{
+			code: 6004,
+			name: 'NoBestBid',
+			msg: 'NoBestBid',
+		},
+		{
+			code: 6005,
+			name: 'NoBestAsk',
+			msg: 'NoBestAsk',
+		},
+		{
+			code: 6006,
+			name: 'NoArbOpportunity',
+			msg: 'NoArbOpportunity',
+		},
+		{
+			code: 6007,
+			name: 'UnprofitableArb',
+			msg: 'UnprofitableArb',
 		},
 	],
 };
