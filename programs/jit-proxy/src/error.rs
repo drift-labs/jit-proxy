@@ -19,4 +19,6 @@ pub enum ErrorCode {
     NoArbOpportunity,
     #[msg("UnprofitableArb")]
     UnprofitableArb,
+    #[msg("PositionLimitBreached")]
+    PositionLimitBreached,
 }

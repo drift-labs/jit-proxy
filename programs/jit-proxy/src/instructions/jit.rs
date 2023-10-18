@@ -15,6 +15,101 @@ use drift::state::user::{User, UserStats};
 use crate::error::ErrorCode;
 use crate::state::{PostOnlyParam, PriceType};
 
+fn check_position_limits(
+    params: JitParams,
+    maker_direction: PositionDirection,
+    taker_base_asset_amount_unfilled: u64,
+    maker_existing_position: i64,
+) -> Result<u64> {
+    if maker_direction == PositionDirection::Long {
+        let size = params.max_position.safe_sub(maker_existing_position)?;
+
+        if size <= 0 {
+            msg!(
+                "maker existing position {} >= max position {}",
+                maker_existing_position,
+                params.max_position
+            );
+            return Err(ErrorCode::PositionLimitBreached.into());
+        }
+
+        Ok(size.unsigned_abs().min(taker_base_asset_amount_unfilled))
+    } else {
+        let size = maker_existing_position.safe_sub(params.min_position)?;
+
+        if size <= 0 {
+            msg!(
+                "maker existing position {} <= min position {}",
+                maker_existing_position,
+                params.min_position
+            );
+            return Err(ErrorCode::PositionLimitBreached.into());
+        }
+
+        Ok(size.unsigned_abs().min(taker_base_asset_amount_unfilled))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_check_position_limits() {
+        let params = JitParams {
+            max_position: 100,
+            min_position: -100,
+            ..Default::default()
+        };
+
+        // same direction, doesn't breach
+        let result = check_position_limits(params, PositionDirection::Long, 10, 40);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 10);
+        let result = check_position_limits(params, PositionDirection::Short, 10, -40);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 10);
+
+        // same direction, whole order breaches, only takes enough to hit limit
+        let result = check_position_limits(params, PositionDirection::Long, 100, 40);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 60);
+        let result = check_position_limits(params, PositionDirection::Short, 100, -40);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 60);
+
+        // opposite direction, doesn't breach
+        let result = check_position_limits(params, PositionDirection::Long, 10, -40);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 10);
+        let result = check_position_limits(params, PositionDirection::Short, 10, 40);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 10);
+
+        // opposite direction, whole order breaches, only takes enough to take flipped limit
+        let result = check_position_limits(params, PositionDirection::Long, 200, -40);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 140);
+        let result = check_position_limits(params, PositionDirection::Short, 200, 40);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 140);
+
+        // opposite direction, maker already breached, allows reducing
+        let result = check_position_limits(params, PositionDirection::Long, 200, -150);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 200);
+        let result = check_position_limits(params, PositionDirection::Short, 200, 150);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 200);
+
+        // same direction, maker already breached, errors
+        let result = check_position_limits(params, PositionDirection::Long, 200, 150);
+        assert!(result.is_err());
+        let result = check_position_limits(params, PositionDirection::Short, 200, -150);
+        assert!(result.is_err());
+    }
+}
+
 pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams) -> Result<()> {
     let clock = Clock::get()?;
     let slot = clock.slot;
@@ -103,30 +198,16 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
             .cast::<i64>()?
     };
 
-    let maker_base_asset_amount = if maker_direction == PositionDirection::Long {
-        let size = params.max_position.safe_sub(maker_existing_position)?;
-
-        if size <= 0 {
-            msg!(
-                "maker existing position {} >= max position {}",
-                maker_existing_position,
-                params.max_position
-            );
+    let maker_base_asset_amount = match check_position_limits(
+        params,
+        maker_direction,
+        taker_base_asset_amount_unfilled,
+        maker_existing_position,
+    ) {
+        Ok(size) => size,
+        Err(e) => {
+            return Err(e);
         }
-
-        size.unsigned_abs().min(taker_base_asset_amount_unfilled)
-    } else {
-        let size = maker_existing_position.safe_sub(params.min_position)?;
-
-        if size <= 0 {
-            msg!(
-                "maker existing position {} <= max position {}",
-                maker_existing_position,
-                params.max_position
-            );
-        }
-
-        size.unsigned_abs().min(taker_base_asset_amount_unfilled)
     };
 
     let order_params = OrderParams {
@@ -184,6 +265,20 @@ pub struct JitParams {
     pub ask: i64,
     pub price_type: PriceType,
     pub post_only: Option<PostOnlyParam>,
+}
+
+impl Default for JitParams {
+    fn default() -> Self {
+        Self {
+            taker_order_id: 0,
+            max_position: 0,
+            min_position: 0,
+            bid: 0,
+            ask: 0,
+            price_type: PriceType::Limit,
+            post_only: None,
+        }
+    }
 }
 
 impl JitParams {
