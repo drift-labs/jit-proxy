@@ -6,6 +6,7 @@ import {
 	DriftClient,
 	getAuctionPrice,
 	getAuctionPriceForOracleOffsetAuction,
+	getVariant,
 	isVariant,
 	OraclePriceData,
 	Order,
@@ -13,6 +14,7 @@ import {
 	SlotSubscriber,
 	UserAccount,
 	UserStatsMap,
+	ZERO,
 } from '@drift-labs/sdk';
 import { BaseJitter } from './baseJitter';
 
@@ -82,6 +84,40 @@ export class JitterSniper extends BaseJitter {
 				stepSize,
 				oraclePrice,
 			} = this.getAuctionAndOrderDetails(order);
+
+			// don't increase risk if we're past max positions
+			if (isVariant(order.marketType, 'perp')) {
+				const currPerpPos = this.driftClient
+					.getUser()
+					.getPerpPosition(order.marketIndex);
+				if (
+					currPerpPos.baseAssetAmount.lt(ZERO) &&
+					isVariant(order.direction, 'short')
+				) {
+					if (currPerpPos.baseAssetAmount.lte(params.minPosition)) {
+						console.log(
+							`Order would increase existing short (mkt ${getVariant(
+								order.marketType
+							)}-${order.marketIndex}) too much`
+						);
+						this.onGoingAuctions.delete(orderSignature);
+						return;
+					}
+				} else if (
+					currPerpPos.baseAssetAmount.gt(ZERO) &&
+					isVariant(order.direction, 'long')
+				) {
+					if (currPerpPos.baseAssetAmount.gte(params.maxPosition)) {
+						console.log(
+							`Order would increase existing long (mkt ${getVariant(
+								order.marketType
+							)}-${order.marketIndex}) too much`
+						);
+						this.onGoingAuctions.delete(orderSignature);
+						return;
+					}
+				}
+			}
 
 			console.log(`
 				Taker wants to ${JSON.stringify(
