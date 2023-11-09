@@ -23,9 +23,9 @@ pub fn arb_perp<'info>(
 
     let taker = ctx.accounts.user.load()?;
 
-    let quote_init = taker
+    let (base_init, quote_init) = taker
         .get_perp_position(market_index)
-        .map_or(0, |p| p.quote_asset_amount);
+        .map_or((0, 0), |p| (p.base_asset_amount, p.quote_asset_amount));
 
     let remaining_accounts_iter = &mut ctx.remaining_accounts.iter().peekable();
     let AccountMaps {
@@ -90,11 +90,11 @@ pub fn arb_perp<'info>(
     place_and_take(&ctx, order_params)?;
 
     let taker = ctx.accounts.user.load()?;
-    let quote_end = taker
+    let (base_end, quote_end) = taker
         .get_perp_position(market_index)
-        .map_or(0, |p| p.quote_asset_amount);
+        .map_or((0, 0), |p| (p.base_asset_amount, p.quote_asset_amount));
 
-    if quote_end <= quote_init {
+    if base_end != base_init || quote_end <= quote_init {
         return Err(ErrorCode::NoArbOpportunity.into());
     }
 
