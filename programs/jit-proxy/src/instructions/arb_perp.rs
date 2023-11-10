@@ -95,8 +95,17 @@ pub fn arb_perp<'info>(
         .map_or((0, 0), |p| (p.base_asset_amount, p.quote_asset_amount));
 
     if base_end != base_init || quote_end <= quote_init {
+        msg!(
+            "base_end {} base_init {} quote_end {} quote_init {}",
+            base_end,
+            base_init,
+            quote_end,
+            quote_init
+        );
         return Err(ErrorCode::NoArbOpportunity.into());
     }
+
+    msg!("pnl {}", quote_end - quote_init);
 
     Ok(())
 }
