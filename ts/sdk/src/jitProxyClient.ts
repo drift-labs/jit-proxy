@@ -197,9 +197,11 @@ export class JitProxyClient {
 	public async getArbPerpIx({
 		makerInfos,
 		marketIndex,
+		referrerInfo,
 	}: {
 		makerInfos: MakerInfo[];
 		marketIndex: number;
+		referrerInfo?: ReferrerInfo;
 	}): Promise<TransactionInstruction> {
 		const userAccounts = [this.driftClient.getUserAccount()];
 		for (const makerInfo of makerInfos) {
@@ -222,6 +224,25 @@ export class JitProxyClient {
 				isWritable: true,
 				isSigner: false,
 			});
+		}
+
+		if (referrerInfo) {
+			const referrerIsMaker =
+				makerInfos.find((maker) =>
+					maker.maker.equals(referrerInfo.referrer)
+				) !== undefined;
+			if (!referrerIsMaker) {
+				remainingAccounts.push({
+					pubkey: referrerInfo.referrer,
+					isWritable: true,
+					isSigner: false,
+				});
+				remainingAccounts.push({
+					pubkey: referrerInfo.referrerStats,
+					isWritable: true,
+					isSigner: false,
+				});
+			}
 		}
 
 		return this.program.methods
