@@ -72,7 +72,7 @@ jobs:
           -H "X-GitHub-Api-Version: 2022-11-28" \
           "https://api.github.com/repos/drift-labs/keeper-bots-v2/dispatches" \
           -d "{\"event_type\": \"jit-sdk-update\", \"client_payload\": {
-            \"sdk-version\": \"$SDK_VERSION\", 
+            \"sdk-version\": \"$SDK_VERSION\",
             \"jit-version\": \"$JIT_VERSION\"
           }}"
       env:

@@ -57,26 +57,15 @@ export abstract class BaseJitter {
 		driftClient: DriftClient;
 		auctionSubscriber: AuctionSubscriber;
 		jitProxyClient: JitProxyClient;
-		userStatsMap?: UserStatsMap;
+		userStatsMap: UserStatsMap;
 	}) {
 		this.auctionSubscriber = auctionSubscriber;
 		this.driftClient = driftClient;
 		this.jitProxyClient = jitProxyClient;
-		this.userStatsMap =
-			userStatsMap ||
-			new UserStatsMap(this.driftClient, {
-				type: 'polling',
-				accountLoader: new BulkAccountLoader(
-					this.driftClient.connection,
-					'confirmed',
-					0
-				),
-			});
 	}
 
 	async subscribe(): Promise<void> {
 		await this.driftClient.subscribe();
-		await this.userStatsMap.subscribe();
 
 		await this.auctionSubscriber.subscribe();
 		this.auctionSubscriber.eventEmitter.on(
