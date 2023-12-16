@@ -86,7 +86,9 @@ pub fn arb_perp<'info>(
         .safe_mul(PRICE_PRECISION)?
         .safe_div(oracle_price_data.price.cast()?)?;
 
-    let base_asset_amount = base_asset_amount.min(max_base_asset_amount.cast()?);
+    let base_asset_amount = base_asset_amount
+        .min(max_base_asset_amount.cast()?)
+        .max(perp_market.amm.min_order_size);
 
     let get_order_params = |taker_direction: PositionDirection, taker_price: u64| -> OrderParams {
         OrderParams {
