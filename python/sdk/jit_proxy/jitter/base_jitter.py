@@ -5,7 +5,7 @@ from functools import partial
 
 from solders.pubkey import Pubkey
 
-from src.jit_proxy_client import JitParams, JitProxyClient
+from jit_proxy.jit_proxy_client import JitParams, JitProxyClient
 
 from driftpy.types import is_variant, UserAccount, Order
 from driftpy.drift_client import DriftClient

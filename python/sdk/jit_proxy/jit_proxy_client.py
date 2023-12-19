@@ -6,10 +6,9 @@ from driftpy.drift_client import DriftClient
 from driftpy.constants.numeric_constants import QUOTE_SPOT_MARKET_INDEX
 from borsh_construct.enum import _rust_enum
 from sumtypes import constructor
-from anchorpy import Program, Idl
-from solana.rpc.types import TxOpts
+from anchorpy import Program
 from solana.transaction import AccountMeta, Instruction
-from jit_client.instructions import jit, check_order_constraints, arb_perp, JitArgs, JitAccounts
+from jit_proxy.jit_client.instructions import jit, check_order_constraints, arb_perp
 
 @_rust_enum
 class PriceType:
@@ -54,15 +53,16 @@ class OrderConstraint:
     market_type: MarketType
 
 class JitProxyClient:
-    def __init__(self, drift_client: DriftClient):
+    def __init__(self, drift_client: DriftClient, program_id: Pubkey):
+        self.program_id = program_id
         self.drift_client = drift_client
         self.program = None
 
     async def init(self):
-        idl = await Program.fetch_idl(self.drift_client.program_id, self.drift_client.program.provider)
-        self.program = Program(idl, self.drift_client.program_id)
+        idl = await Program.fetch_idl(self.program_id, self.drift_client.program.provider)
+        self.program = Program(idl, self.program_id)
 
-    async def jit(self, params: JitIxParams, tx_params: Optional[TxOpts]):
+    async def jit(self, params: JitIxParams):
         if self.program is None:
             await self.init()
         ix = await self.get_jit_ix(params)
