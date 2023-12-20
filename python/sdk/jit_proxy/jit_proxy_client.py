@@ -113,6 +113,8 @@ class JitProxyClient:
                 "user_stats" : self.drift_client.get_user_stats_public_key(),
                 "taker" : params.taker_key,
                 "taker_stats" : params.taker_stats_key,
+                "authority" : self.drift_client.wallet.public_key,
+                "drift_program" : self.drift_client.program_id
             },
             self.drift_client.program_id,
             remaining_accounts
@@ -201,6 +203,7 @@ class JitProxyClient:
                 "state" : await self.drift_client.get_state_public_key(),
                 "user" : await self.drift_client.get_user_account_public_key(),
                 "user_stats" : await self.drift_client.get_user_stats_public_key(),
+                "authority" : self.drift_client.wallet.public_key,
                 "drift_program" : self.drift_client.program_id
             },
             self.drift_client.program_id,
