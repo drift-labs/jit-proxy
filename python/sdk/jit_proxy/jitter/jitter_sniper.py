@@ -90,7 +90,7 @@ class JitterSniper(BaseJitter):
                 Auction: {details.auction_start_price} -> {details.auction_end_price}, step size {details.step_size}
                 Current slot: {self.slot_subscriber.current_slot}, Order slot: {order.slot},
                 Will cross?: {details.will_cross}
-                Slots to wait: {details.slots_until_cross}. Target slot = {order.slot + details.slots_til_cross}
+                Slots to wait: {details.slots_until_cross}. Target slot = {order.slot + details.slots_until_cross}
             """)
 
             target_slot = order.slot + details.slots_until_cross \
