@@ -13,8 +13,10 @@ from driftpy.drift_client import DriftClient
 from driftpy.account_subscription_config import AccountSubscriptionConfig
 from driftpy.auction_subscriber.auction_subscriber import AuctionSubscriber
 from driftpy.auction_subscriber.types import AuctionSubscriberConfig
+from driftpy.slot.slot_subscriber import SlotSubscriber
 
 from jit_proxy.jitter.jitter_shotgun import JitterShotgun
+from jit_proxy.jitter.jitter_sniper import JitterSniper
 from jit_proxy.jit_proxy_client import JitProxyClient
 
 async def main():
@@ -38,20 +40,33 @@ async def main():
     auction_subscriber_config = AuctionSubscriberConfig(drift_client)
     auction_subscriber = AuctionSubscriber(auction_subscriber_config)
     
+    slot_subscriber = SlotSubscriber(drift_client)
+
     jit_proxy_client = JitProxyClient(
         drift_client, 
         Pubkey.from_string('J1TnP8zvVxbtF5KFp5xRmWuvG9McnhzmBd9XGfCyuxFP')
         )
 
-    jitter = JitterShotgun(
+    # jitter_sniper = JitterSniper(
+    #     drift_client,
+    #     slot_subscriber,
+    #     auction_subscriber,
+    #     jit_proxy_client,
+    # )
+
+    # await jitter_sniper.subscribe()
+
+    # print("Subscribed to jitter sniper successfully")
+
+    jitter_shotgun = JitterShotgun(
         drift_client,
         auction_subscriber,
         jit_proxy_client
     )
 
-    await jitter.subscribe()
+    await jitter_shotgun.subscribe()
 
-    print("Subscribed to jitter successfully")
+    print("Subscribed to jitter shotgun successfully")
 
     try:
         while True:

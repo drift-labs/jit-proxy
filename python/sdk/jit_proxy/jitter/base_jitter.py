@@ -8,14 +8,13 @@ from solders.pubkey import Pubkey
 
 from jit_proxy.jit_proxy_client import JitParams, JitProxyClient
 
-from driftpy.types import is_variant, UserAccount, Order
+from driftpy.types import is_variant, UserAccount, Order, UserStatsAccount, ReferrerInfo
 from driftpy.drift_client import DriftClient
 from driftpy.auction_subscriber.auction_subscriber import AuctionSubscriber
 from driftpy.addresses import get_user_stats_account_public_key
 from driftpy.math.orders import has_auction_price
 
 UserFilter = Callable[[UserAccount, str, Order], bool]
-
 class BaseJitter(ABC):
     @abstractmethod
     def __init__(
@@ -30,8 +29,9 @@ class BaseJitter(ABC):
         self.perp_params: Dict[int, JitParams] = {}
         self.spot_params: Dict[int, JitParams] = {}
         self.ongoing_auctions: Dict[str, Future] = {}
-        self.user_filter = UserFilter
+        self.user_filter: Optional[UserFilter] = None
 
+    @abstractmethod
     async def subscribe(self):
         await self.drift_client.subscribe()
         await self.auction_subscriber.subscribe()
@@ -81,6 +81,7 @@ class BaseJitter(ABC):
             print("Order sig unknown")
 
             if is_variant(order.order_type, 'Perp'):
+                print("Perp Auction")
                 if not order.market_index in self.perp_params:
                     return
 
@@ -101,6 +102,7 @@ class BaseJitter(ABC):
                 self.ongoing_auctions[order_sig] = future
 
             else:
+                print("Spot Auction")
                 if not order.market_index in self.spot_params:
                     return
                 
@@ -133,7 +135,7 @@ class BaseJitter(ABC):
         future.set_result(None)
         return future
 
-    def get_order_signatures(taker_key: str, order_id: int) -> str:
+    def get_order_signatures(self, taker_key: str, order_id: int) -> str:
         return f"{taker_key}-{order_id}"
 
     def update_perp_params(self, market_index: int, params: JitParams):
@@ -144,3 +146,15 @@ class BaseJitter(ABC):
 
     def set_user_filter(self, user_filter: Optional[UserFilter]):
         self.user_filter = user_filter
+    
+    def get_referrer_info(self, taker_stats: UserStatsAccount) -> Optional[ReferrerInfo]:
+        if taker_stats.referrer == Pubkey.default():
+            return None
+        else:
+            return ReferrerInfo(
+                taker_stats.referrer, 
+                get_user_stats_account_public_key(
+                    self.drift_client.program_id, 
+                    taker_stats.referrer
+                    )
+                )

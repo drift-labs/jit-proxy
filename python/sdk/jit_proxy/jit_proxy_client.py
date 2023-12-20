@@ -12,8 +12,8 @@ from jit_proxy.jit_client.instructions import jit, check_order_constraints, arb_
 
 @_rust_enum
 class PriceType:
-    LIMIT: constructor()
-    ORACLE: constructor()
+    Limit: constructor()
+    Oracle: constructor()
 
 @dataclass
 class JitIxParams:
