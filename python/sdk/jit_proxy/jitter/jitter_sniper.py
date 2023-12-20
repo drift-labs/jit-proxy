@@ -164,6 +164,8 @@ class JitterSniper(BaseJitter):
                         print('Order does not cross params yet')
                     elif '0x1793' in str(e):
                         print('Oracle invalid')
+                    elif '0x1772' in str(e):
+                        print('Order already filled')
                     else:
                         await asyncio.sleep(3)  # sleep for 3 seconds
                         del self.ongoing_auctions[order_sig]
@@ -172,7 +174,7 @@ class JitterSniper(BaseJitter):
                 await asyncio.sleep(0.05)  # 50ms
             self.on_going_auctions.delete(order_sig)
 
-        return try_fill
+        return await try_fill()
 
     def get_auction_and_order_details(self, order: Order) -> AuctionAndOrderDetails:
         params = self.perp_params.get(order.market_index) \
