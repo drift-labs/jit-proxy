@@ -169,6 +169,8 @@ class JitterSniper(BaseJitter):
                 await asyncio.sleep(0.05)  # 50ms
             self.on_going_auctions.delete(order_sig)
 
+        return try_fill
+
     def get_auction_and_order_details(self, order: Order) -> AuctionAndOrderDetails:
         params = self.perp_params.get(order.market_index) \
             if is_variant(order.market_type, 'Perp') \
