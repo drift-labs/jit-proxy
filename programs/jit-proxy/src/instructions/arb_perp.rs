@@ -3,10 +3,15 @@ use drift::controller::position::PositionDirection;
 use drift::cpi::accounts::PlaceAndTake;
 use drift::instructions::optional_accounts::{load_maps, AccountMaps};
 use drift::instructions::{OrderParams, PostOnlyParam};
+use drift::math::casting::Cast;
+use drift::math::constants::{MARGIN_PRECISION_U128, PRICE_PRECISION};
+use drift::math::margin::MarginRequirementType;
 use drift::program::Drift;
 use drift::state::perp_market_map::MarketSet;
+use std::ops::Deref;
 
 use drift::math::orders::find_bids_and_asks_from_users;
+use drift::math::safe_math::SafeMath;
 use drift::state::state::State;
 use drift::state::user::{MarketType, OrderTriggerCondition, OrderType, User, UserStats};
 use drift::state::user_map::load_user_maps;
@@ -31,7 +36,7 @@ pub fn arb_perp<'info>(
     let AccountMaps {
         perp_market_map,
         mut oracle_map,
-        ..
+        spot_market_map,
     } = load_maps(
         remaining_accounts_iter,
         &MarketSet::new(),
@@ -39,6 +44,10 @@ pub fn arb_perp<'info>(
         slot,
         None,
     )?;
+
+    let quote_asset_token_amount = taker
+        .get_quote_spot_position()
+        .get_token_amount(spot_market_map.get_quote_spot_market()?.deref())?;
 
     let (makers, _) = load_user_maps(remaining_accounts_iter, true)?;
 
@@ -56,6 +65,30 @@ pub fn arb_perp<'info>(
     }
 
     let base_asset_amount = best_bid.base_asset_amount.min(best_ask.base_asset_amount);
+
+    let (intermediate_base, start_direction) = if base_init >= 0 {
+        let intermediate_base = base_init.safe_sub(base_asset_amount.cast()?)?;
+        (intermediate_base, PositionDirection::Short)
+    } else {
+        let intermediate_base = base_init.safe_add(base_asset_amount.cast()?)?;
+        (intermediate_base, PositionDirection::Long)
+    };
+
+    let init_margin_ratio = perp_market.get_margin_ratio(
+        intermediate_base.unsigned_abs().cast()?,
+        MarginRequirementType::Initial,
+    )?;
+
+    // assumes all free collateral in quote asset token
+    let max_base_asset_amount = quote_asset_token_amount
+        .safe_mul(MARGIN_PRECISION_U128)?
+        .safe_div(init_margin_ratio.cast()?)?
+        .safe_mul(PRICE_PRECISION)?
+        .safe_div(oracle_price_data.price.cast()?)?;
+
+    let base_asset_amount = base_asset_amount
+        .min(max_base_asset_amount.cast()?)
+        .max(perp_market.amm.min_order_size);
 
     let get_order_params = |taker_direction: PositionDirection, taker_price: u64| -> OrderParams {
         OrderParams {
@@ -79,10 +112,17 @@ pub fn arb_perp<'info>(
         }
     };
 
-    let order_params = vec![
-        get_order_params(PositionDirection::Long, best_ask.price),
-        get_order_params(PositionDirection::Short, best_bid.price),
-    ];
+    let order_params = if start_direction == PositionDirection::Long {
+        vec![
+            get_order_params(PositionDirection::Long, best_ask.price),
+            get_order_params(PositionDirection::Short, best_bid.price),
+        ]
+    } else {
+        vec![
+            get_order_params(PositionDirection::Short, best_bid.price),
+            get_order_params(PositionDirection::Long, best_ask.price),
+        ]
+    };
 
     drop(taker);
     drop(perp_market);
