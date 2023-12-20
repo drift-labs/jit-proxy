@@ -1,20 +1,16 @@
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import Optional, cast
+
 from solders.pubkey import Pubkey
+
 from driftpy.types import UserAccount, PostOnlyParams, ReferrerInfo, MarketType, MakerInfo, is_variant
 from driftpy.drift_client import DriftClient
 from driftpy.constants.numeric_constants import QUOTE_SPOT_MARKET_INDEX
-from borsh_construct.enum import _rust_enum
-from sumtypes import constructor
-from anchorpy import Context, Program
-from solana.transaction import AccountMeta, Instruction
-from jit_proxy.jit_client.instructions import jit, check_order_constraints, arb_perp
-from jit_proxy.jit_client.types import PriceTypeKind
 
-# @_rust_enum
-# class PriceType:
-#     Limit = constructor()
-#     Oracle = constructor()
+from anchorpy import Context, Program
+from solana.transaction import AccountMeta
+
+from jit_proxy.jit_client.types import PriceTypeKind
 
 @dataclass
 class JitIxParams:

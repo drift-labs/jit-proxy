@@ -5,14 +5,14 @@ import asyncio
 
 from solders.pubkey import Pubkey
 
-from jit_proxy.jit_proxy_client import  JitProxyClient
-
 from driftpy.types import is_variant, UserAccount, Order, UserStatsAccount, ReferrerInfo
 from driftpy.drift_client import DriftClient
 from driftpy.auction_subscriber.auction_subscriber import AuctionSubscriber
 from driftpy.addresses import get_user_stats_account_public_key
 from driftpy.math.orders import has_auction_price
 from driftpy.math.conversion import convert_to_number
+
+from jit_proxy.jit_proxy_client import  JitProxyClient
 
 from jit_proxy.jit_client.types import PriceTypeKind
 

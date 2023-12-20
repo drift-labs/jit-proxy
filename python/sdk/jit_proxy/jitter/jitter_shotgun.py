@@ -1,16 +1,16 @@
 import asyncio
 
-from typing import Any, Coroutine, Optional
+from typing import Any, Coroutine
 
 from solders.pubkey import Pubkey
-
-from jit_proxy.jitter.base_jitter import BaseJitter
-from jit_proxy.jit_proxy_client import JitIxParams, JitProxyClient
 
 from driftpy.drift_client import DriftClient
 from driftpy.auction_subscriber.auction_subscriber import AuctionSubscriber
 from driftpy.types import is_variant, UserAccount, Order
 from driftpy.accounts.get_accounts import get_user_stats_account
+
+from jit_proxy.jitter.base_jitter import BaseJitter
+from jit_proxy.jit_proxy_client import JitIxParams, JitProxyClient
 
 class JitterShotgun(BaseJitter):
     def __init__(

@@ -5,9 +5,6 @@ from typing import Any, Coroutine
 
 from solders.pubkey import Pubkey
 
-from jit_proxy.jitter.base_jitter import BaseJitter
-from jit_proxy.jit_proxy_client import JitIxParams, JitProxyClient
-
 from driftpy.drift_client import DriftClient
 from driftpy.auction_subscriber.auction_subscriber import AuctionSubscriber
 from driftpy.slot.slot_subscriber import SlotSubscriber
@@ -16,6 +13,9 @@ from driftpy.types import is_variant, OraclePriceData, Order, UserAccount
 from driftpy.math.conversion import convert_to_number
 from driftpy.math.auction import get_auction_price_for_oracle_offset_auction, get_auction_price
 from driftpy.constants.numeric_constants import PRICE_PRECISION
+
+from jit_proxy.jitter.base_jitter import BaseJitter
+from jit_proxy.jit_proxy_client import JitProxyClient
 
 @dataclass
 class AuctionAndOrderDetails:
