@@ -55,6 +55,7 @@ class BaseJitter(ABC):
 
     async def on_account_update(self, taker: UserAccount, taker_key: Pubkey, slot: int):
         print("Auction received!")
+        print("----------------------------")
         taker_key_str = str(taker_key)
 
         taker_stats_key = get_user_stats_account_public_key(
@@ -65,7 +66,6 @@ class BaseJitter(ABC):
         print(f"Taker: {taker.authority}")
 
         for order in taker.orders:
-            print("----------------------------")
             print(f"Market Type: {str(order.market_type)}")
             print(f"Market Index: {order.market_index}")
             print(f"Order Price: {convert_to_number(order.price)}")
@@ -73,14 +73,17 @@ class BaseJitter(ABC):
             print(f"Order Direction: {str(order.direction)}")
             print(f"Auction Start Price: {convert_to_number(order.auction_start_price)}")
             print(f"Auction End Price: {convert_to_number(order.auction_end_price)}")
-            print("----------------------------")
+            print(f"Order Base Asset Amount: {convert_to_number(order.base_asset_amount)}")
+            print(f"Order Base Asset Amount Filled: {convert_to_number(order.base_asset_amount_filled)}")
 
             if not is_variant(order.status, 'Open'):
                 print("Order is closed.")
+                print("----------------------------")
                 continue
 
             if not has_auction_price(order, slot):
                 print("Order does not have auction price.")
+                print("----------------------------")
                 continue
             
             if self.user_filter is not None:
@@ -105,6 +108,7 @@ class BaseJitter(ABC):
 
                 if order.base_asset_amount - order.base_asset_amount_filled <= perp_market_account.amm.min_order_size:
                     print("Order filled within min_order_size")
+                    print("----------------------------")
                     return
                                 
                 future = await self.create_try_fill(
@@ -119,12 +123,15 @@ class BaseJitter(ABC):
             else:
                 print("Spot Auction")
                 if not order.market_index in self.spot_params:
+                    print(f"Jitter not listening to {order.market_index}")
+                    print("----------------------------")
                     return
                                 
                 spot_market_account = self.drift_client.get_spot_market_account(order.market_index)
 
                 if order.base_asset_amount - order.base_asset_amount_filled <= spot_market_account.min_order_size:
                     print("Order filled within min_order_size")
+                    print("----------------------------")
                     return
                 
                 future = await self.create_try_fill(

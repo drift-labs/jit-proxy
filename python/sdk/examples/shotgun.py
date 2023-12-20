@@ -13,7 +13,6 @@ from driftpy.drift_client import DriftClient
 from driftpy.account_subscription_config import AccountSubscriptionConfig
 from driftpy.auction_subscriber.auction_subscriber import AuctionSubscriber
 from driftpy.auction_subscriber.types import AuctionSubscriberConfig
-from driftpy.constants.numeric_constants import PRICE_PRECISION
 
 from jit_proxy.jitter.jitter_shotgun import JitterShotgun
 from jit_proxy.jitter.base_jitter import JitParams

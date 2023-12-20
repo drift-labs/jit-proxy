@@ -73,13 +73,14 @@ class JitterShotgun(BaseJitter):
                     del self.ongoing_auctions[order_sig]
                     return
                 except Exception as e:
-                    print(f"Failed to fill {order_sig}: {e}")
+                    print(f"Failed to fill {order_sig}")
                     if '0x1770' in str(e) or '0x1771' in str(e):
                         print('Order does not cross params yet, retrying')
                     elif '0x1793' in str(e):
                         print('Oracle invalid, retrying')
+                    elif '0x1772' in str(e):
+                        print('Order already filled, retrying')
                     else:
-
                         await asyncio.sleep(10)  # sleep for 10 seconds
                         del self.ongoing_auctions[order_sig]
                         return
