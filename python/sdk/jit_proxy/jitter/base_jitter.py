@@ -1,20 +1,32 @@
-from asyncio import Future
 from typing import Callable, Dict, Optional
 from abc import ABC, abstractmethod
-from functools import partial
+from dataclasses import dataclass
 import asyncio
 
 from solders.pubkey import Pubkey
 
-from jit_proxy.jit_proxy_client import JitParams, JitProxyClient
+from jit_proxy.jit_proxy_client import  JitProxyClient
 
 from driftpy.types import is_variant, UserAccount, Order, UserStatsAccount, ReferrerInfo
 from driftpy.drift_client import DriftClient
 from driftpy.auction_subscriber.auction_subscriber import AuctionSubscriber
 from driftpy.addresses import get_user_stats_account_public_key
 from driftpy.math.orders import has_auction_price
+from driftpy.math.conversion import convert_to_number
+
+from jit_proxy.jit_client.types import PriceTypeKind
 
 UserFilter = Callable[[UserAccount, str, Order], bool]
+
+@dataclass
+class JitParams:
+    bid: int
+    ask: int
+    min_position: int
+    max_position: int
+    price_type: PriceTypeKind
+    sub_account_id: Optional[int]
+
 class BaseJitter(ABC):
     @abstractmethod
     def __init__(
@@ -28,7 +40,7 @@ class BaseJitter(ABC):
         self.jit_proxy_client = jit_proxy_client
         self.perp_params: Dict[int, JitParams] = {}
         self.spot_params: Dict[int, JitParams] = {}
-        self.ongoing_auctions: Dict[str, Future] = {}
+        self.ongoing_auctions: Dict[str, asyncio.Future] = {}
         self.user_filter: Optional[UserFilter] = None
 
     @abstractmethod
@@ -42,7 +54,7 @@ class BaseJitter(ABC):
             asyncio.create_task(self.on_account_update(taker, taker_key, slot))
 
     async def on_account_update(self, taker: UserAccount, taker_key: Pubkey, slot: int):
-        print("Event received!")
+        print("Auction received!")
         taker_key_str = str(taker_key)
 
         taker_stats_key = get_user_stats_account_public_key(
@@ -50,46 +62,49 @@ class BaseJitter(ABC):
             taker.authority
         )
 
-        print(f"taker: {taker}")
-
-        print(f"Looping Orders: {len(taker.orders)}")
+        print(f"Taker: {taker.authority}")
 
         for order in taker.orders:
-            if not is_variant(order.status, 'Open'):
-                continue
+            print("----------------------------")
+            print(f"Market Type: {str(order.market_type)}")
+            print(f"Market Index: {order.market_index}")
+            print(f"Order Price: {convert_to_number(order.price)}")
+            print(f"Order Type: {str(order.order_type)}")
+            print(f"Order Direction: {str(order.direction)}")
+            print(f"Auction Start Price: {convert_to_number(order.auction_start_price)}")
+            print(f"Auction End Price: {convert_to_number(order.auction_end_price)}")
+            print("----------------------------")
 
-            print("Not Open")
+            if not is_variant(order.status, 'Open'):
+                print("Order is closed.")
+                continue
 
             if not has_auction_price(order, slot):
+                print("Order does not have auction price.")
                 continue
             
-            print("Has Auction Price")
-
             if self.user_filter is not None:
                 if self.user_filter(taker, taker_key_str, order):
+                    print("User filtered out.")
                     return
-
-            print("Passed User Filter")
 
             order_sig = self.get_order_signatures(taker_key_str, order.order_id)
 
-            print("Got order sig")
+            print(f"Order sig: {order_sig}")
 
             if order_sig in self.ongoing_auctions:
                 continue
 
-            print("Order sig unknown")
-
             if is_variant(order.order_type, 'Perp'):
                 print("Perp Auction")
                 if not order.market_index in self.perp_params:
+                    print(f"Jitter not listening to {order.market_index}")
                     return
-
-                print("Valid Perp Auction")
 
                 perp_market_account = self.drift_client.get_perp_market_account(order.market_index)
 
                 if order.base_asset_amount - order.base_asset_amount_filled <= perp_market_account.amm.min_order_size:
+                    print("Order filled within min_order_size")
                     return
                                 
                 future = await self.create_try_fill(
@@ -105,12 +120,11 @@ class BaseJitter(ABC):
                 print("Spot Auction")
                 if not order.market_index in self.spot_params:
                     return
-                
-                print("Valid Spot Auction")
-                
+                                
                 spot_market_account = self.drift_client.get_spot_market_account(order.market_index)
 
                 if order.base_asset_amount - order.base_asset_amount_filled <= spot_market_account.min_order_size:
+                    print("Order filled within min_order_size")
                     return
                 
                 future = await self.create_try_fill(
@@ -131,7 +145,7 @@ class BaseJitter(ABC):
         order: Order,
         order_sig: str
     ):
-        future = Future()
+        future = asyncio.Future()
         future.set_result(None)
         return future
 

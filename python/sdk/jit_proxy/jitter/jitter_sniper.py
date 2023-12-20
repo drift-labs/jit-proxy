@@ -1,7 +1,7 @@
 import asyncio
 
 from dataclasses import dataclass
-from typing import Any, Coroutine, Optional
+from typing import Any, Coroutine
 
 from solders.pubkey import Pubkey
 
@@ -53,7 +53,10 @@ class JitterSniper(BaseJitter):
     ) -> Coroutine[Any, Any, None]:
         print("JitterSniper: Creating Try Fill")
         async def try_fill():
-            params = self.perp_params.get(order.market_index)
+            params = self.perp_params.get(order.market_index) \
+                if is_variant(order.market_type, 'Perp') \
+                else self.spot_params.get(order.market_index)
+                
             if params is None:
                 del self.ongoing_auctions[order_sig]
                 return
@@ -241,7 +244,7 @@ class JitterSniper(BaseJitter):
         target_slot: int,
         order: Order,
         initial_details: AuctionAndOrderDetails
-    ) -> (int, AuctionAndOrderDetails) :
+    ) -> (int, AuctionAndOrderDetails):
         auction_end_slot = order.auction_duration + order.slot
         current_details: AuctionAndOrderDetails = initial_details
         will_cross = initial_details.will_cross

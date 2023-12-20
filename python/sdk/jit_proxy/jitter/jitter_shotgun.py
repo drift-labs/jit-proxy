@@ -9,7 +9,7 @@ from jit_proxy.jit_proxy_client import JitIxParams, JitProxyClient
 
 from driftpy.drift_client import DriftClient
 from driftpy.auction_subscriber.auction_subscriber import AuctionSubscriber
-from driftpy.types import UserAccount, Order
+from driftpy.types import is_variant, UserAccount, Order
 from driftpy.accounts.get_accounts import get_user_stats_account
 
 class JitterShotgun(BaseJitter):
@@ -35,8 +35,10 @@ class JitterShotgun(BaseJitter):
         print("JitterShotgun: Creating Try Fill")
         async def try_fill():
             for _ in range(10):
-                params = self.perp_params.get(order.market_index)
-
+                params = self.perp_params.get(order.market_index) \
+                    if is_variant(order.market_type, 'Perp') \
+                    else self.spot_params.get(order.market_index)
+                
                 if params is None:
                     self.ongoing_auctions.pop(order_sig)
                     return
@@ -48,7 +50,7 @@ class JitterShotgun(BaseJitter):
                 print(f"Trying to fill {order_sig}")
 
                 try:
-                    tx_sig_and_slot = await self.jit_proxy_client.jit(
+                    sig = await self.jit_proxy_client.jit(
                         JitIxParams(
                             taker_key,
                             taker_stats_key,
@@ -66,12 +68,12 @@ class JitterShotgun(BaseJitter):
                     )
 
                     print(f"Filled {order_sig}")
-                    print(f"tx signature: {tx_sig_and_slot.tx_sig}")
+                    print(f"Signature: {sig}")
                     await asyncio.sleep(10) # sleep for 10 seconds
                     del self.ongoing_auctions[order_sig]
                     return
                 except Exception as e:
-                    print(f"Failed to fill {order_sig}")
+                    print(f"Failed to fill {order_sig}: {e}")
                     if '0x1770' in str(e) or '0x1771' in str(e):
                         print('Order does not cross params yet, retrying')
                     elif '0x1793' in str(e):
@@ -82,4 +84,4 @@ class JitterShotgun(BaseJitter):
                         del self.ongoing_auctions[order_sig]
                         return
             del self.ongoing_auctions[order_sig]
-        return try_fill
+        return await try_fill()
