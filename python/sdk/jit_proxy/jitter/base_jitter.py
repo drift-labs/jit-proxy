@@ -1,7 +1,8 @@
+import asyncio
+
 from typing import Callable, Dict, Optional
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-import asyncio
 
 from solders.pubkey import Pubkey
 

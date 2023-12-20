@@ -3,12 +3,13 @@ from typing import Optional, cast
 
 from solders.pubkey import Pubkey
 
+from anchorpy import Context, Program
+
+from solana.transaction import AccountMeta
+
 from driftpy.types import UserAccount, PostOnlyParams, ReferrerInfo, MarketType, MakerInfo, is_variant
 from driftpy.drift_client import DriftClient
 from driftpy.constants.numeric_constants import QUOTE_SPOT_MARKET_INDEX
-
-from anchorpy import Context, Program
-from solana.transaction import AccountMeta
 
 from jit_proxy.jit_client.types import PriceTypeKind
 
@@ -74,20 +75,13 @@ class JitProxyClient:
                 is_signer = False
             ))
 
-        if str(params.price_type) == 'Oracle()':
-            price_type = self.program.type['PriceType'].Oracle()
-        elif str(params.price_type) == 'Limit()':
-            price_type = self.program.type['PriceType'].Limit()
-        else:
-            raise ValueError(f"Unknown price type: {params.price_type}")
-
         jit_params = self.program.type["JitParams"](
             taker_order_id=params.taker_order_id,
             max_position=cast(int, params.max_position),
             min_position=cast(int, params.min_position),
             bid=cast(int, params.bid),
             ask=cast(int, params.ask),
-            price_type=price_type,
+            price_type=self.get_price_type(str(params.price_type)),
             post_only=params.post_only
         )
 
@@ -112,6 +106,13 @@ class JitProxyClient:
 
         return tx_sig_and_slot.tx_sig     
 
+    def get_price_type(self, price_type_str: str):
+        if price_type_str == 'Oracle()':
+            return self.program.type['PriceType'].Oracle()
+        elif price_type_str == 'Limit()':
+            return self.program.type['PriceType'].Limit()
+        else:
+            raise ValueError(f"Unknown price type: {price_type_str}")
 
 
 
