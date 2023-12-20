@@ -30,6 +30,7 @@ class JitterShotgun(BaseJitter):
         order: Order,
         order_sig: str
     ) -> Coroutine[Any, Any, None]:
+        print("Creating Try Fill")
         async def try_fill():
             i = 0
             while i < 10:
