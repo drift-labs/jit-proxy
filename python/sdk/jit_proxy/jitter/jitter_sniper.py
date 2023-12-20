@@ -270,5 +270,5 @@ class JitterSniper(BaseJitter):
             if will_cross:
                 target_slot = order.slot + current_details.slots_until_cross
 
-            asyncio.sleep(50) # 50 ms
+            await asyncio.sleep(0.05) # 50 ms
             
