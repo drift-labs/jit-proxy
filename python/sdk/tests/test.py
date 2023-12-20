@@ -53,5 +53,10 @@ async def main():
 
     print("Subscribed to jitter successfully")
 
+    try:
+        while True:
+            await asyncio.sleep(3600)
+    except asyncio.CancelledError:
+        pass
 if __name__ == "__main__":
     asyncio.run(main())
