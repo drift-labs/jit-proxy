@@ -95,8 +95,6 @@ class JitProxyClient:
             post_only=params.post_only
         )
 
-        print(self.program.rpc['jit'])
-
         ix = self.program.instruction['jit'](
             jit_params, 
             ctx = Context(
@@ -117,96 +115,6 @@ class JitProxyClient:
         tx_sig_and_slot = await self.drift_client.send_ixs(ix)
 
         return tx_sig_and_slot.tx_sig     
-
-    async def get_check_order_constraint_ix(self, sub_account_id: int, order_constraints: list[OrderConstraint]) -> Instruction:
-        if self.program is None:
-            await self.init()
-        sub_account_id = sub_account_id if sub_account_id is not None else self.drift_client.active_sub_account_id
-
-        readable_perp_market_indexes = []
-        readable_spot_market_indexes = []
-
-        for constraint in order_constraints:
-            if is_variant(constraint.market_type, 'Perp'):
-                readable_perp_market_indexes.append(constraint.market_index)
-            else:
-                readable_spot_market_indexes.append(constraint.market_index)
-
-        remaining_accounts = self.drift_client.get_remaining_accounts(
-            [self.drift_client.get_user_account(sub_account_id)],
-            readable_spot_market_indexes = readable_spot_market_indexes,
-            readable_perp_market_indexes = readable_perp_market_indexes
-        )
-
-        return check_order_constraints(
-            {
-                "constraints": order_constraints
-            },
-            {
-                "user" : await self.drift_client.get_user_account_public_key(sub_account_id)
-            },
-            self.drift_client.program_id,
-            remaining_accounts
-        )
-
-    async def arb_perp(self, params: ArbIxParams):
-        if self.program is None:
-            await self.init()
-        ix = await self.get_arb_perp_ix(params.maker_infos, params.market_index)
-        return await self.drift_client.send_ixs([ix], self.drift_client.wallet)
-
-    async def get_arb_perp_ix(self, maker_infos: list[MakerInfo], market_index: int, referrer_info: Optional[ReferrerInfo]) -> Instruction:
-        if self.program is None:
-            await self.init()
-        user_accounts = [self.drift_client.get_user_account()]
-        for maker_info in maker_infos:
-            user_accounts.append(maker_info.maker_user_account)
-
-        remaining_accounts = self.drift_client.get_remaining_accounts(
-            user_accounts,
-            writable_perp_market_indexes = [market_index]
-        )
-
-        for maker_info in maker_infos:
-            remaining_accounts.append(AccountMeta(
-                pubkey = maker_info.maker,
-                is_writable = True,
-                is_signer = False
-            ))
-            remaining_accounts.append(AccountMeta(
-                pubkey = maker_info.maker_stats,
-                is_writable = True,
-                is_signer = False
-            ))
-
-        if referrer_info is not None:
-            is_referrer_maker = next((maker for maker in maker_infos if maker.maker == referrer_info.referrer), None)
-            if not is_referrer_maker:
-                remaining_accounts.append(AccountMeta(
-                    pubkey = referrer_info.referrer,
-                    is_writable = True,
-                    is_signer = False
-                ))
-                remaining_accounts.append(AccountMeta(
-                    pubkey = referrer_info.referrer_stats,
-                    is_writable = True,
-                    is_signer = False
-                ))
-
-        return arb_perp(
-            {
-                "market_index" : market_index
-            },
-            {
-                "state" : await self.drift_client.get_state_public_key(),
-                "user" : await self.drift_client.get_user_account_public_key(),
-                "user_stats" : await self.drift_client.get_user_stats_public_key(),
-                "authority" : self.drift_client.wallet.public_key,
-                "drift_program" : self.drift_client.program_id
-            },
-            self.drift_client.program_id,
-            remaining_accounts
-        )
 
 
 
