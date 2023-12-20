@@ -11,5 +11,5 @@ ts/sdk/lib/
 ts/sdk/src/**/*.js
 ts/sdk/src/**/*.js.map
 package-lock.json
-python/sdk/tests/.env
+python/sdk/examples/.env
 python/poetry.lock
