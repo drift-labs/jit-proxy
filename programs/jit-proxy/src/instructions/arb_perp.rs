@@ -1,10 +1,11 @@
 use anchor_lang::prelude::*;
 use drift::controller::position::PositionDirection;
 use drift::cpi::accounts::PlaceAndTake;
+use drift::error::DriftResult;
 use drift::instructions::optional_accounts::{load_maps, AccountMaps};
 use drift::instructions::{OrderParams, PostOnlyParam};
 use drift::math::casting::Cast;
-use drift::math::constants::{MARGIN_PRECISION_U128, PRICE_PRECISION};
+use drift::math::constants::{BASE_PRECISION, MARGIN_PRECISION_U128, QUOTE_PRECISION};
 use drift::math::margin::MarginRequirementType;
 use drift::program::Drift;
 use drift::state::perp_market_map::MarketSet;
@@ -12,6 +13,7 @@ use std::ops::Deref;
 
 use drift::math::orders::find_bids_and_asks_from_users;
 use drift::math::safe_math::SafeMath;
+use drift::state::oracle::OraclePriceData;
 use drift::state::state::State;
 use drift::state::user::{MarketType, OrderTriggerCondition, OrderType, User, UserStats};
 use drift::state::user_map::load_user_maps;
@@ -80,11 +82,11 @@ pub fn arb_perp<'info>(
     )?;
 
     // assumes all free collateral in quote asset token
-    let max_base_asset_amount = quote_asset_token_amount
-        .safe_mul(MARGIN_PRECISION_U128)?
-        .safe_div(init_margin_ratio.cast()?)?
-        .safe_mul(PRICE_PRECISION)?
-        .safe_div(oracle_price_data.price.cast()?)?;
+    let max_base_asset_amount = calculate_max_base_asset_amount(
+        quote_asset_token_amount,
+        init_margin_ratio,
+        oracle_price_data,
+    )?;
 
     let base_asset_amount = base_asset_amount
         .min(max_base_asset_amount.cast()?)
@@ -161,6 +163,19 @@ pub struct ArbPerp<'info> {
     pub drift_program: Program<'info, Drift>,
 }
 
+fn calculate_max_base_asset_amount(
+    quote_asset_token_amount: u128,
+    init_margin_ratio: u32,
+    oracle_price_data: &OraclePriceData,
+) -> DriftResult<u128> {
+    quote_asset_token_amount
+        .saturating_sub((quote_asset_token_amount / 100).min(10 * QUOTE_PRECISION)) // room for error
+        .safe_mul(MARGIN_PRECISION_U128)?
+        .safe_div(init_margin_ratio.cast()?)?
+        .safe_mul(BASE_PRECISION)?
+        .safe_div(oracle_price_data.price.cast()?)
+}
+
 fn place_and_take<'info>(
     ctx: &Context<'_, '_, '_, 'info, ArbPerp<'info>>,
     orders_params: Vec<OrderParams>,
@@ -181,4 +196,29 @@ fn place_and_take<'info>(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use drift::math::constants::{MARGIN_PRECISION, PRICE_PRECISION_I64, QUOTE_PRECISION};
+    use drift::state::oracle::OraclePriceData;
+
+    #[test]
+    pub fn calculate_max_base_asset_amount() {
+        let quote_asset_token_amount = 100 * QUOTE_PRECISION;
+        let init_margin_ratio = MARGIN_PRECISION / 10;
+        let oracle_price_data = OraclePriceData {
+            price: 100 * PRICE_PRECISION_I64,
+            ..OraclePriceData::default()
+        };
+
+        let max_base_asset_amount = super::calculate_max_base_asset_amount(
+            quote_asset_token_amount,
+            init_margin_ratio,
+            &oracle_price_data,
+        )
+        .unwrap();
+
+        assert_eq!(max_base_asset_amount, 9900000000);
+    }
 }
