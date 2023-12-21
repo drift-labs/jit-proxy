@@ -79,10 +79,13 @@ class JitterShotgun(BaseJitter):
                     elif '0x1793' in str(e):
                         print('Oracle invalid, retrying')
                     elif '0x1772' in str(e):
-                        print('Order already filled, retrying')
+                        print('Order already filled')
+                        # we don't want to retry if the order is filled
+                        break
                     else:
                         await asyncio.sleep(10)  # sleep for 10 seconds
                         del self.ongoing_auctions[order_sig]
                         return
-            del self.ongoing_auctions[order_sig]
+            if order_sig in self.ongoing_auctions:
+                del self.ongoing_auctions[order_sig]
         return await try_fill()
