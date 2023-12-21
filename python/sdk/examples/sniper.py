@@ -4,7 +4,6 @@ import os
 from dotenv import load_dotenv
 
 from solana.rpc.async_api import AsyncClient
-from solders.keypair import Keypair
 from solders.pubkey import Pubkey
 
 from anchorpy import Wallet
@@ -14,6 +13,7 @@ from driftpy.account_subscription_config import AccountSubscriptionConfig
 from driftpy.auction_subscriber.auction_subscriber import AuctionSubscriber
 from driftpy.auction_subscriber.types import AuctionSubscriberConfig
 from driftpy.slot.slot_subscriber import SlotSubscriber
+from driftpy.keypair import load_keypair
 
 from jit_proxy.jitter.jitter_sniper import JitterSniper
 from jit_proxy.jitter.base_jitter import JitParams
@@ -25,9 +25,7 @@ async def main():
     secret = os.getenv("PRIVATE_KEY")
     url = os.getenv("RPC_URL")
 
-    pk_stripped = secret.strip("[]").replace(" ", "").split(",")
-    pk_bytes = bytes([int(b) for b in pk_stripped])
-    kp = Keypair.from_bytes(pk_bytes)
+    kp = load_keypair(secret)
     wallet = Wallet(kp)
 
     connection = AsyncClient(url)

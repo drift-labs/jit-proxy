@@ -68,22 +68,6 @@ class BaseJitter(ABC):
         print(f"Taker: {taker.authority}")
 
         for order in taker.orders:
-            print(f"Market Type: {str(order.market_type)}")
-            print(f"Market Index: {order.market_index}")
-            print(f"Order Price: {convert_to_number(order.price)}")
-            print(f"Order Type: {str(order.order_type)}")
-            print(f"Order Direction: {str(order.direction)}")
-            print(
-                f"Auction Start Price: {convert_to_number(order.auction_start_price)}"
-            )
-            print(f"Auction End Price: {convert_to_number(order.auction_end_price)}")
-            print(
-                f"Order Base Asset Amount: {convert_to_number(order.base_asset_amount)}"
-            )
-            print(
-                f"Order Base Asset Amount Filled: {convert_to_number(order.base_asset_amount_filled)}"
-            )
-
             if not is_variant(order.status, "Open"):
                 print("Order is closed.")
                 print("----------------------------")
@@ -106,6 +90,22 @@ class BaseJitter(ABC):
             if order_sig in self.ongoing_auctions:
                 continue
 
+            print(f"Market Type: {str(order.market_type)}")
+            print(f"Market Index: {order.market_index}")
+            print(f"Order Price: {convert_to_number(order.price)}")
+            print(f"Order Type: {str(order.order_type)}")
+            print(f"Order Direction: {str(order.direction)}")
+            print(
+                f"Auction Start Price: {convert_to_number(order.auction_start_price)}"
+            )
+            print(f"Auction End Price: {convert_to_number(order.auction_end_price)}")
+            print(
+                f"Order Base Asset Amount: {convert_to_number(order.base_asset_amount)}"
+            )
+            print(
+                f"Order Base Asset Amount Filled: {convert_to_number(order.base_asset_amount_filled)}"
+            )
+
             if is_variant(order.order_type, "Perp"):
                 print("Perp Auction")
                 if not order.market_index in self.perp_params:
@@ -124,15 +124,10 @@ class BaseJitter(ABC):
                     print("----------------------------")
                     return
 
-                # future = asyncio.create_task(self.create_try_fill(
-                #     taker,
-                #     taker_key,
-                #     taker_stats_key,
-                #     order,
-                #     order_sig
-                # ))
-                future = await self.create_try_fill(
-                    taker, taker_key, taker_stats_key, order, order_sig
+                future = asyncio.create_task(
+                    self.create_try_fill(
+                        taker, taker_key, taker_stats_key, order, order_sig
+                    )
                 )
                 self.ongoing_auctions[order_sig] = future
 
@@ -155,15 +150,10 @@ class BaseJitter(ABC):
                     print("----------------------------")
                     return
 
-                # future = asyncio.create_task(self.create_try_fill(
-                #     taker,
-                #     taker_key,
-                #     taker_stats_key,
-                #     order,
-                #     order_sig
-                # ))
-                future = await self.create_try_fill(
-                    taker, taker_key, taker_stats_key, order, order_sig
+                future = asyncio.create_task(
+                    self.create_try_fill(
+                        taker, taker_key, taker_stats_key, order, order_sig
+                    )
                 )
                 self.ongoing_auctions[order_sig] = future
 
