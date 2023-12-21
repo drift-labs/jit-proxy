@@ -13,9 +13,7 @@ from driftpy.addresses import get_user_stats_account_public_key
 from driftpy.math.orders import has_auction_price
 from driftpy.math.conversion import convert_to_number
 
-from jit_proxy.jit_proxy_client import  JitProxyClient
-
-from jit_proxy.jit_client.types import PriceTypeKind
+from jit_proxy.jit_proxy_client import  JitProxyClient, PriceType
 
 UserFilter = Callable[[UserAccount, str, Order], bool]
 
@@ -25,7 +23,7 @@ class JitParams:
     ask: int
     min_position: int
     max_position: int
-    price_type: PriceTypeKind
+    price_type: PriceType
     sub_account_id: Optional[int]
 
 class BaseJitter(ABC):
@@ -112,13 +110,13 @@ class BaseJitter(ABC):
                     print("----------------------------")
                     return
                                 
-                future = await self.create_try_fill(
+                future = asyncio.create_task(self.create_try_fill(
                     taker,
                     taker_key,
                     taker_stats_key,
                     order,
                     order_sig
-                )
+                ))
                 self.ongoing_auctions[order_sig] = future
 
             else:
@@ -135,13 +133,13 @@ class BaseJitter(ABC):
                     print("----------------------------")
                     return
                 
-                future = await self.create_try_fill(
+                future = asyncio.create_task(self.create_try_fill(
                     taker,
                     taker_key,
                     taker_stats_key,
                     order,
                     order_sig
-                )
+                ))
                 self.ongoing_auctions[order_sig] = future
 
     @abstractmethod

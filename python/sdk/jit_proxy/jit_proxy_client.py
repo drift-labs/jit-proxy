@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 from typing import Optional, cast
 
+from borsh_construct.enum import _rust_enum
+from sumtypes import constructor
+
 from solders.pubkey import Pubkey
 
 from anchorpy import Context, Program
@@ -11,8 +14,12 @@ from driftpy.types import UserAccount, PostOnlyParams, ReferrerInfo, MarketType,
 from driftpy.drift_client import DriftClient
 from driftpy.constants.numeric_constants import QUOTE_SPOT_MARKET_INDEX
 
-from jit_proxy.jit_client.types import PriceTypeKind
 
+@_rust_enum
+class PriceType:
+    Limit = constructor()
+    Oracle = constructor()
+    
 @dataclass
 class JitIxParams:
     taker_key: Pubkey
@@ -24,7 +31,7 @@ class JitIxParams:
     bid: int
     ask: int
     post_only: Optional[PostOnlyParams]
-    price_type: Optional[PriceTypeKind]
+    price_type: Optional[PriceType]
     referrer_info: Optional[ReferrerInfo]
     sub_account_id: Optional[int]
 
@@ -53,7 +60,8 @@ class JitProxyClient:
         if self.program is None:
             await self.init()
 
-        sub_account_id = params.sub_account_id if params.sub_account_id is not None else self.drift_client.active_sub_account_id
+        sub_account_id = self.drift_client.get_sub_account_id_for_ix(params.sub_account_id)
+        
         order = next((order for order in params.taker.orders if order.order_id == params.taker_order_id), None)
         remaining_accounts = self.drift_client.get_remaining_accounts(
             user_accounts = [params.taker, self.drift_client.get_user_account(sub_account_id)],
@@ -81,7 +89,7 @@ class JitProxyClient:
             min_position=cast(int, params.min_position),
             bid=cast(int, params.bid),
             ask=cast(int, params.ask),
-            price_type=self.get_price_type(str(params.price_type)),
+            price_type=self.get_price_type(params.price_type),
             post_only=params.post_only
         )
 
@@ -106,16 +114,10 @@ class JitProxyClient:
 
         return tx_sig_and_slot.tx_sig     
 
-    def get_price_type(self, price_type_str: str):
-        if price_type_str == 'Oracle()':
+    def get_price_type(self, price_type: PriceType):
+        if is_variant(price_type, "Oracle"):
             return self.program.type['PriceType'].Oracle()
-        elif price_type_str == 'Limit()':
+        elif is_variant(price_type, "Limit"):
             return self.program.type['PriceType'].Limit()
         else:
-            raise ValueError(f"Unknown price type: {price_type_str}")
-
-
-
-
-
-
+            raise ValueError(f"Unknown price type: {str(price_type)}")

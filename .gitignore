@@ -13,3 +13,7 @@ ts/sdk/src/**/*.js.map
 package-lock.json
 python/sdk/examples/.env
 python/poetry.lock
+__pycache__/
+*.pyc
+*.pyo
+*.pyd

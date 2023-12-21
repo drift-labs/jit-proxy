@@ -16,9 +16,7 @@ from driftpy.auction_subscriber.types import AuctionSubscriberConfig
 
 from jit_proxy.jitter.jitter_shotgun import JitterShotgun
 from jit_proxy.jitter.base_jitter import JitParams
-from jit_proxy.jit_proxy_client import JitProxyClient
-
-from jit_proxy.jit_client.types.price_type import Oracle
+from jit_proxy.jit_proxy_client import JitProxyClient, PriceType
 
 async def main():
     load_dotenv()
@@ -54,12 +52,12 @@ async def main():
     )
 
     jit_params = JitParams(
-        bid = 1_000_000,
+        bid = -1_000_000,
         ask = 1_010_000,
-        min_position = 1,
+        min_position = 0,
         max_position = 2,
-        price_type = Oracle(),
-        sub_account_id = None
+        price_type = PriceType.Oracle(),
+        sub_account_id= None
     )
     
     jitter_shotgun.update_spot_params(0, jit_params)

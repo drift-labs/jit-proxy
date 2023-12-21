@@ -17,9 +17,8 @@ from driftpy.slot.slot_subscriber import SlotSubscriber
 
 from jit_proxy.jitter.jitter_sniper import JitterSniper
 from jit_proxy.jitter.base_jitter import JitParams
-from jit_proxy.jit_proxy_client import JitProxyClient
+from jit_proxy.jit_proxy_client import JitProxyClient, PriceType
 
-from jit_proxy.jit_client.types.price_type import Oracle
 
 async def main():
     load_dotenv()
@@ -58,11 +57,11 @@ async def main():
     )
 
     jit_params = JitParams(
-        bid = 1_000_000,
+        bid = -1_000_000,
         ask = 1_010_000,
-        min_position = 1,
+        min_position = 0,
         max_position = 2,
-        price_type = Oracle(),
+        price_type = PriceType.Oracle(),
         sub_account_id = None
     )
 
