@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from dataclasses import dataclass
 from typing import Any, Coroutine
@@ -20,6 +21,8 @@ from driftpy.constants.numeric_constants import PRICE_PRECISION
 from jit_proxy.jitter.base_jitter import BaseJitter
 from jit_proxy.jit_proxy_client import JitProxyClient
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @dataclass
 class AuctionAndOrderDetails:
@@ -56,7 +59,7 @@ class JitterSniper(BaseJitter):
         order: Order,
         order_sig: str,
     ) -> Coroutine[Any, Any, None]:
-        print("JitterSniper: Creating Try Fill")
+        logger.info("JitterSniper: Creating Try Fill")
 
         async def try_fill():
             params = (
@@ -85,7 +88,7 @@ class JitterSniper(BaseJitter):
                     order.direction, "Short"
                 ):
                     if current_perp_pos.base_asset_amount <= params.min_position:
-                        print(
+                        logger.warning(
                             f"Order would increase existing short (mkt \
                               {str(order.market_type)}-{order.market_index} \
                               ) too much"
@@ -96,7 +99,7 @@ class JitterSniper(BaseJitter):
                         order.direction, "Long"
                     ):
                         if current_perp_pos.base_asset_amount >= params.max_position:
-                            print(
+                            logger.warning(
                                 f"Order would increase existing long (mkt \
                               {str(order.market_type)}-{order.market_index} \
                               ) too much"
@@ -104,7 +107,7 @@ class JitterSniper(BaseJitter):
                         del self.ongoing_auctions[order_sig]
                         return
 
-            print(
+            logger.info(
                 f"""
                 Taker wants to {order.direction}, order slot is {order.slot},
                 My market: {details.bid}@{details.ask},
@@ -126,7 +129,7 @@ class JitterSniper(BaseJitter):
             )
 
             if slot == -1:
-                print("Auction expired without crossing")
+                logger.info("Auction expired without crossing")
                 if order_sig in self.ongoing_auctions:
                     del self.ongoing_auctions[order_sig]
                 return
@@ -154,7 +157,7 @@ class JitterSniper(BaseJitter):
                 PRICE_PRECISION,
             )
 
-            print(
+            logger.info(
                 f"""
                 Expected auction price: {details.auction_start_price + details.slots_until_cross * details.step_size}
                 Actual auction price: {auction_price}
@@ -164,7 +167,7 @@ class JitterSniper(BaseJitter):
             """
             )
 
-            print(
+            logger.info(
                 f"""
                 Trying to fill {order_sig} with:
                 market: {bid}@{ask}
@@ -192,19 +195,19 @@ class JitterSniper(BaseJitter):
                         }
                     )
 
-                    print(f"Filled {order_sig}")
-                    print(f"tx signature: {tx_sig_and_slot.tx_sig}")
+                    logger.info(f"Filled {order_sig}")
+                    logger.info(f"tx signature: {tx_sig_and_slot.tx_sig}")
                     await asyncio.sleep(3)  # Sleep for 3 seconds
                     del self.ongoing_auctions[order_sig]
                     return
                 except Exception as e:
-                    print(f"Failed to fill {order_sig}")
+                    logger.error(f"Failed to fill {order_sig}: {e}")
                     if "0x1770" in str(e) or "0x1771" in str(e):
-                        print("Order does not cross params yet")
+                        logger.error("Order does not cross params yet")
                     elif "0x1793" in str(e):
-                        print("Oracle invalid")
+                        logger.error("Oracle invalid")
                     elif "0x1772" in str(e):
-                        print("Order already filled")
+                        logger.error("Order already filled")
                         # we don't want to retry if the order is filled
                         break
                     else:
