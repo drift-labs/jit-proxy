@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from typing import Any, Coroutine
 
@@ -12,6 +13,8 @@ from driftpy.accounts.get_accounts import get_user_stats_account
 from jit_proxy.jitter.base_jitter import BaseJitter
 from jit_proxy.jit_proxy_client import JitIxParams, JitProxyClient
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class JitterShotgun(BaseJitter):
     def __init__(
@@ -33,7 +36,7 @@ class JitterShotgun(BaseJitter):
         order: Order,
         order_sig: str,
     ) -> Coroutine[Any, Any, None]:
-        print("JitterShotgun: Creating Try Fill")
+        logger.info("JitterShotgun: Creating Try Fill")
 
         async def try_fill():
             for _ in range(10):
@@ -53,7 +56,7 @@ class JitterShotgun(BaseJitter):
 
                 referrer_info = self.get_referrer_info(taker_stats)
 
-                print(f"Trying to fill {order_sig}")
+                logger.info(f"Trying to fill {order_sig}")
 
                 try:
                     sig = await self.jit_proxy_client.jit(
@@ -73,19 +76,19 @@ class JitterShotgun(BaseJitter):
                         )
                     )
 
-                    print(f"Filled {order_sig}")
-                    print(f"Signature: {sig}")
+                    logger.info(f"Filled {order_sig}")
+                    logger.info(f"Signature: {sig}")
                     await asyncio.sleep(10)  # sleep for 10 seconds
                     del self.ongoing_auctions[order_sig]
                     return
                 except Exception as e:
-                    print(f"Failed to fill {order_sig}")
+                    logger.error(f"Failed to fill {order_sig}: {e}")
                     if "0x1770" in str(e) or "0x1771" in str(e):
-                        print("Order does not cross params yet, retrying")
+                        logger.error("Order does not cross params yet, retrying")
                     elif "0x1793" in str(e):
-                        print("Oracle invalid, retrying")
+                        logger.error("Oracle invalid, retrying")
                     elif "0x1772" in str(e):
-                        print("Order already filled")
+                        logger.error("Order already filled")
                         # we don't want to retry if the order is filled
                         break
                     else:
