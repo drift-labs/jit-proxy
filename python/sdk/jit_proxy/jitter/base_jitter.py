@@ -18,9 +18,6 @@ from jit_proxy.jit_proxy_client import JitProxyClient, PriceType
 
 UserFilter = Callable[[UserAccount, str, Order], bool]
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 @dataclass
 class JitParams:
     bid: int
@@ -38,6 +35,7 @@ class BaseJitter(ABC):
         drift_client: DriftClient,
         auction_subscriber: AuctionSubscriber,
         jit_proxy_client: JitProxyClient,
+        verbose: bool,
     ):
         self.drift_client = drift_client
         self.auction_subscriber = auction_subscriber
@@ -46,6 +44,15 @@ class BaseJitter(ABC):
         self.spot_params: Dict[int, JitParams] = {}
         self.ongoing_auctions: Dict[str, asyncio.Future] = {}
         self.user_filter: Optional[UserFilter] = None
+
+        if verbose:
+            logging_level = logging.INFO
+        else:
+            logging_level = logging.WARNING
+
+        logging.basicConfig(level=logging_level)
+        self.logger = logging.getLogger(__name__)
+
 
     @abstractmethod
     async def subscribe(self):
@@ -60,59 +67,59 @@ class BaseJitter(ABC):
         asyncio.create_task(self.on_account_update(taker, taker_key, slot))
 
     async def on_account_update(self, taker: UserAccount, taker_key: Pubkey, slot: int):
-        logger.info("Auction received!")
-        logger.info("----------------------------")
+        self.logger.info("Auction received!")
+        self.logger.info("----------------------------")
         taker_key_str = str(taker_key)
 
         taker_stats_key = get_user_stats_account_public_key(
             self.drift_client.program_id, taker.authority
         )
 
-        logger.info(f"Taker: {taker.authority}")
+        self.logger.info(f"Taker: {taker.authority}")
 
         for order in taker.orders:
             if not is_variant(order.status, "Open"):
-                logger.info("Order is closed.")
-                logger.info("----------------------------")
+                self.logger.info("Order is closed.")
+                self.logger.info("----------------------------")
                 continue
 
             if not has_auction_price(order, slot):
-                logger.info("Order does not have auction price.")
-                logger.info("----------------------------")
+                self.logger.info("Order does not have auction price.")
+                self.logger.info("----------------------------")
                 continue
 
             if self.user_filter is not None:
                 if self.user_filter(taker, taker_key_str, order):
-                    logger.info("User filtered out.")
+                    self.logger.info("User filtered out.")
                     return
 
             order_sig = self.get_order_signatures(taker_key_str, order.order_id)
 
-            logger.info(f"Order sig: {order_sig}")
+            self.logger.info(f"Order sig: {order_sig}")
 
             if order_sig in self.ongoing_auctions:
                 continue
 
-            logger.info(f"Market Type: {str(order.market_type)}")
-            logger.info(f"Market Index: {order.market_index}")
-            logger.info(f"Order Price: {convert_to_number(order.price)}")
-            logger.info(f"Order Type: {str(order.order_type)}")
-            logger.info(f"Order Direction: {str(order.direction)}")
-            logger.info(
+            self.logger.info(f"Market Type: {str(order.market_type)}")
+            self.logger.info(f"Market Index: {order.market_index}")
+            self.logger.info(f"Order Price: {convert_to_number(order.price)}")
+            self.logger.info(f"Order Type: {str(order.order_type)}")
+            self.logger.info(f"Order Direction: {str(order.direction)}")
+            self.logger.info(
                 f"Auction Start Price: {convert_to_number(order.auction_start_price)}"
             )
-            logger.info(f"Auction End Price: {convert_to_number(order.auction_end_price)}")
-            logger.info(
+            self.logger.info(f"Auction End Price: {convert_to_number(order.auction_end_price)}")
+            self.logger.info(
                 f"Order Base Asset Amount: {convert_to_number(order.base_asset_amount)}"
             )
-            logger.info(
+            self.logger.info(
                 f"Order Base Asset Amount Filled: {convert_to_number(order.base_asset_amount_filled)}"
             )
 
             if is_variant(order.order_type, "Perp"):
-                logger.info("Perp Auction")
+                self.logger.info("Perp Auction")
                 if not order.market_index in self.perp_params:
-                    logger.info(f"Jitter not listening to {order.market_index}")
+                    self.logger.info(f"Jitter not listening to {order.market_index}")
                     return
 
                 perp_market_account = self.drift_client.get_perp_market_account(
@@ -123,8 +130,8 @@ class BaseJitter(ABC):
                     order.base_asset_amount - order.base_asset_amount_filled
                     <= perp_market_account.amm.min_order_size
                 ):
-                    logger.info("Order filled within min_order_size")
-                    logger.info("----------------------------")
+                    self.logger.info("Order filled within min_order_size")
+                    self.logger.info("----------------------------")
                     return
 
                 future = asyncio.create_task(
@@ -135,10 +142,10 @@ class BaseJitter(ABC):
                 self.ongoing_auctions[order_sig] = future
 
             else:
-                logger.info("Spot Auction")
+                self.logger.info("Spot Auction")
                 if not order.market_index in self.spot_params:
-                    logger.info(f"Jitter not listening to {order.market_index}")
-                    logger.info("----------------------------")
+                    self.logger.info(f"Jitter not listening to {order.market_index}")
+                    self.logger.info("----------------------------")
                     return
 
                 spot_market_account = self.drift_client.get_spot_market_account(
@@ -149,8 +156,8 @@ class BaseJitter(ABC):
                     order.base_asset_amount - order.base_asset_amount_filled
                     <= spot_market_account.min_order_size
                 ):
-                    logger.info("Order filled within min_order_size")
-                    logger.info("----------------------------")
+                    self.logger.info("Order filled within min_order_size")
+                    self.logger.info("----------------------------")
                     return
 
                 future = asyncio.create_task(
