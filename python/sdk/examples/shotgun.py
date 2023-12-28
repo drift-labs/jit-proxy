@@ -14,9 +14,9 @@ from driftpy.auction_subscriber.auction_subscriber import AuctionSubscriber
 from driftpy.auction_subscriber.types import AuctionSubscriberConfig
 from driftpy.keypair import load_keypair
 
-from jit_proxy.jitter.jitter_shotgun import JitterShotgun
-from jit_proxy.jitter.base_jitter import JitParams
-from jit_proxy.jit_proxy_client import JitProxyClient, PriceType
+from jit_proxy.jitter.jitter_shotgun import JitterShotgun # type: ignore
+from jit_proxy.jitter.base_jitter import JitParams # type: ignore
+from jit_proxy.jit_proxy_client import JitProxyClient, PriceType #type: ignore
 
 
 async def main():
@@ -44,7 +44,7 @@ async def main():
         Pubkey.from_string("J1TnP8zvVxbtF5KFp5xRmWuvG9McnhzmBd9XGfCyuxFP"),
     )
 
-    jitter_shotgun = JitterShotgun(drift_client, auction_subscriber, jit_proxy_client)
+    jitter_shotgun = JitterShotgun(drift_client, auction_subscriber, jit_proxy_client, True)
 
     jit_params = JitParams(
         bid=-1_000_000,

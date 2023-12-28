@@ -48,7 +48,7 @@ async def main():
     )
 
     jitter_sniper = JitterSniper(
-        drift_client, slot_subscriber, auction_subscriber, jit_proxy_client
+        drift_client, slot_subscriber, auction_subscriber, jit_proxy_client, True
     )
 
     jit_params = JitParams(

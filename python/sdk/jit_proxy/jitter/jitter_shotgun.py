@@ -1,5 +1,4 @@
 import asyncio
-import logging
 
 from typing import Any, Coroutine
 
@@ -13,8 +12,6 @@ from driftpy.accounts.get_accounts import get_user_stats_account
 from jit_proxy.jitter.base_jitter import BaseJitter
 from jit_proxy.jit_proxy_client import JitIxParams, JitProxyClient
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 class JitterShotgun(BaseJitter):
     def __init__(
@@ -22,8 +19,9 @@ class JitterShotgun(BaseJitter):
         drift_client: DriftClient,
         auction_subscriber: AuctionSubscriber,
         jit_proxy_client: JitProxyClient,
+        verbose: bool,
     ):
-        super().__init__(drift_client, auction_subscriber, jit_proxy_client)
+        super().__init__(drift_client, auction_subscriber, jit_proxy_client, verbose)
 
     async def subscribe(self):
         await super().subscribe()
@@ -36,7 +34,7 @@ class JitterShotgun(BaseJitter):
         order: Order,
         order_sig: str,
     ) -> Coroutine[Any, Any, None]:
-        logger.info("JitterShotgun: Creating Try Fill")
+        self.logger.info("JitterShotgun: Creating Try Fill")
 
         async def try_fill():
             for _ in range(10):
@@ -56,7 +54,7 @@ class JitterShotgun(BaseJitter):
 
                 referrer_info = self.get_referrer_info(taker_stats)
 
-                logger.info(f"Trying to fill {order_sig}")
+                self.logger.info(f"Trying to fill {order_sig}")
 
                 try:
                     sig = await self.jit_proxy_client.jit(
@@ -76,19 +74,19 @@ class JitterShotgun(BaseJitter):
                         )
                     )
 
-                    logger.info(f"Filled {order_sig}")
-                    logger.info(f"Signature: {sig}")
+                    self.logger.info(f"Filled {order_sig}")
+                    self.logger.info(f"Signature: {sig}")
                     await asyncio.sleep(10)  # sleep for 10 seconds
                     del self.ongoing_auctions[order_sig]
                     return
                 except Exception as e:
-                    logger.error(f"Failed to fill {order_sig}: {e}")
+                    self.logger.error(f"Failed to fill {order_sig}: {e}")
                     if "0x1770" in str(e) or "0x1771" in str(e):
-                        logger.error("Order does not cross params yet, retrying")
+                        self.logger.error("Order does not cross params yet, retrying")
                     elif "0x1793" in str(e):
-                        logger.error("Oracle invalid, retrying")
+                        self.logger.error("Oracle invalid, retrying")
                     elif "0x1772" in str(e):
-                        logger.error("Order already filled")
+                        self.logger.error("Order already filled")
                         # we don't want to retry if the order is filled
                         break
                     else:
