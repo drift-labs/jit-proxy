@@ -123,7 +123,7 @@ class JitProxyClient:
             bid=cast(int, params.bid),
             ask=cast(int, params.ask),
             price_type=self.get_price_type(params.price_type),
-            post_only=params.post_only,
+            post_only=self.get_post_only(params.post_only),
         )
 
         ix = self.program.instruction["jit"](
@@ -156,3 +156,11 @@ class JitProxyClient:
             return self.program.type["PriceType"].Limit()
         else:
             raise ValueError(f"Unknown price type: {str(price_type)}")
+        
+    def get_post_only(self, post_only: PostOnlyParams):
+        if is_variant(post_only, "MustPostOnly"):
+            return self.program.type["PostOnlyParam"].MustPostOnly()
+        elif is_variant(post_only, "TryPostOnly"):
+            return self.program.type["PostOnlyParam"].TryPostOnly()
+        else:
+            return getattr(self.program.type["PostOnlyParam"], 'None')()
