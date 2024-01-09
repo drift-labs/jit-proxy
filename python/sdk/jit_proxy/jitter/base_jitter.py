@@ -100,28 +100,14 @@ class BaseJitter(ABC):
             if order_sig in self.ongoing_auctions:
                 continue
 
-            self.logger.info(f"Market Type: {str(order.market_type)}")
-            self.logger.info(f"Market Index: {order.market_index}")
-            self.logger.info(f"Order Price: {convert_to_number(order.price)}")
-            self.logger.info(f"Order Type: {str(order.order_type)}")
-            self.logger.info(f"Order Direction: {str(order.direction)}")
-            self.logger.info(
-                f"Auction Start Price: {convert_to_number(order.auction_start_price)}"
-            )
-            self.logger.info(f"Auction End Price: {convert_to_number(order.auction_end_price)}")
-            self.logger.info(
-                f"Order Base Asset Amount: {convert_to_number(order.base_asset_amount)}"
-            )
-            self.logger.info(
-                f"Order Base Asset Amount Filled: {convert_to_number(order.base_asset_amount_filled)}"
-            )
-
-            if is_variant(order.order_type, "Perp"):
+            if is_variant(order.market_type, "Perp"):
                 self.logger.info("Perp Auction")
                 if not order.market_index in self.perp_params:
                     self.logger.info(f"Jitter not listening to {order.market_index}")
                     return
 
+                self.log_details(order)
+                    
                 perp_market_account = self.drift_client.get_perp_market_account(
                     order.market_index
                 )
@@ -147,6 +133,8 @@ class BaseJitter(ABC):
                     self.logger.info(f"Jitter not listening to {order.market_index}")
                     self.logger.info("----------------------------")
                     return
+                
+                self.log_details(order)
 
                 spot_market_account = self.drift_client.get_spot_market_account(
                     order.market_index
@@ -166,6 +154,23 @@ class BaseJitter(ABC):
                     )
                 )
                 self.ongoing_auctions[order_sig] = future
+
+    def log_details(self, order: Order):
+        self.logger.info(f"Market Type: {str(order.market_type)}")
+        self.logger.info(f"Market Index: {order.market_index}")
+        self.logger.info(f"Order Price: {convert_to_number(order.price)}")
+        self.logger.info(f"Order Type: {str(order.order_type)}")
+        self.logger.info(f"Order Direction: {str(order.direction)}")
+        self.logger.info(
+            f"Auction Start Price: {convert_to_number(order.auction_start_price)}"
+        )
+        self.logger.info(f"Auction End Price: {convert_to_number(order.auction_end_price)}")
+        self.logger.info(
+            f"Order Base Asset Amount: {convert_to_number(order.base_asset_amount)}"
+        )
+        self.logger.info(
+            f"Order Base Asset Amount Filled: {convert_to_number(order.base_asset_amount_filled)}"
+        )
 
     @abstractmethod
     async def create_try_fill(
