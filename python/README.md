@@ -2,10 +2,10 @@
 
 ## QuickStart Guide
 
-1. Run `poetry install` in the `/python` directoyr
+1. Run `poetry install` in the `/python` directory
 2. Add ```.env``` file in ```/sdk/examples``` with your ```RPC_URL``` and ```PRIVATE_KEY``` as a byte array
 3. Customize ```JitParams``` in either ```shotgun.py``` or ```sniper.py```
-4. Run ```poetry run python -m examples.sniper``` or ```poetry run python -m examples.shotgun``` while in the ```python``` directory
+4. Run ```poetry run python -m examples.sniper``` or ```poetry run python -m examples.shotgun``` while in the ```sdk``` directory
 
 ## Shotgun vs Sniper
 

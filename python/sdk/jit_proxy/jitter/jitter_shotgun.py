@@ -6,7 +6,7 @@ from solders.pubkey import Pubkey
 
 from driftpy.drift_client import DriftClient
 from driftpy.auction_subscriber.auction_subscriber import AuctionSubscriber
-from driftpy.types import is_variant, UserAccount, Order
+from driftpy.types import is_variant, UserAccount, Order, PostOnlyParams
 from driftpy.accounts.get_accounts import get_user_stats_account
 
 from jit_proxy.jitter.base_jitter import BaseJitter
@@ -37,7 +37,7 @@ class JitterShotgun(BaseJitter):
         self.logger.info("JitterShotgun: Creating Try Fill")
 
         async def try_fill():
-            for _ in range(10):
+            for i in range(10):
                 params = (
                     self.perp_params.get(order.market_index)
                     if is_variant(order.market_type, "Perp")
@@ -54,7 +54,7 @@ class JitterShotgun(BaseJitter):
 
                 referrer_info = self.get_referrer_info(taker_stats)
 
-                self.logger.info(f"Trying to fill {order_sig}")
+                self.logger.info(f"Trying to fill {order_sig} -> Attempt: {i + 1}")
 
                 try:
                     sig = await self.jit_proxy_client.jit(
@@ -67,29 +67,30 @@ class JitterShotgun(BaseJitter):
                             params.min_position,
                             params.bid,
                             params.ask,
-                            None,
                             params.price_type,
                             referrer_info,
                             params.sub_account_id,
+                            PostOnlyParams.MustPostOnly(),
                         )
                     )
 
-                    self.logger.info(f"Filled {order_sig}")
+                    self.logger.info(f"Filled Order: {order_sig}")
                     self.logger.info(f"Signature: {sig}")
                     await asyncio.sleep(10)  # sleep for 10 seconds
                     del self.ongoing_auctions[order_sig]
                     return
                 except Exception as e:
-                    self.logger.error(f"Failed to fill {order_sig}: {e}")
+                    self.logger.error(f"Failed to fill Order: {order_sig}")
                     if "0x1770" in str(e) or "0x1771" in str(e):
-                        self.logger.error("Order does not cross params yet, retrying")
+                        self.logger.error(f"Order: {order_sig} does not cross params yet, retrying")
                     elif "0x1793" in str(e):
                         self.logger.error("Oracle invalid, retrying")
                     elif "0x1772" in str(e):
-                        self.logger.error("Order already filled")
+                        self.logger.error(f"Order: {order_sig} already filled")
                         # we don't want to retry if the order is filled
                         break
                     else:
+                        self.logger.error(f"Error: {e}")
                         await asyncio.sleep(10)  # sleep for 10 seconds
                         del self.ongoing_auctions[order_sig]
                         return

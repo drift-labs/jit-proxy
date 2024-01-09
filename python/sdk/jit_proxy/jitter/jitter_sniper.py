@@ -9,7 +9,7 @@ from driftpy.drift_client import DriftClient
 from driftpy.auction_subscriber.auction_subscriber import AuctionSubscriber
 from driftpy.slot.slot_subscriber import SlotSubscriber
 from driftpy.accounts.get_accounts import get_user_stats_account
-from driftpy.types import is_variant, OraclePriceData, Order, UserAccount
+from driftpy.types import is_variant, OraclePriceData, Order, UserAccount, PostOnlyParams
 from driftpy.math.conversion import convert_to_number
 from driftpy.math.auction import (
     get_auction_price_for_oracle_offset_auction,
@@ -186,10 +186,10 @@ class JitterSniper(BaseJitter):
                             params.min_position,
                             params.bid,
                             params.ask,
-                            None,
                             params.price_type,
                             referrer_info,
                             params.sub_account_id,
+                            PostOnlyParams.MustPostOnly(),
                         }
                     )
 

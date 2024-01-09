@@ -38,10 +38,10 @@ class JitIxParams:
     min_position: int
     bid: int
     ask: int
-    post_only: Optional[PostOnlyParams]
     price_type: Optional[PriceType]
     referrer_info: Optional[ReferrerInfo]
     sub_account_id: Optional[int]
+    post_only: PostOnlyParams = PostOnlyParams.MustPostOnly()
 
 
 @dataclass
