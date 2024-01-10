@@ -636,8 +636,8 @@ dependencies = [
 
 [[package]]
 name = "drift"
-version = "2.41.0"
-source = "git+https://github.com/drift-labs/protocol-v2.git?rev=e5cdd4#e5cdd497bec48e83e8b9d99dc67e1493d82940a9"
+version = "2.53.0"
+source = "git+https://github.com/drift-labs/protocol-v2.git?tag=v2.53.0#376187a77283ae8095027a48e4a75a2511c33b12"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
@@ -645,6 +645,7 @@ dependencies = [
  "base64 0.13.0",
  "borsh",
  "bytemuck",
+ "drift-macros",
  "enumflags2",
  "num-derive",
  "num-integer",
@@ -654,8 +655,18 @@ dependencies = [
  "serum_dex",
  "solana-program",
  "solana-security-txt",
+ "static_assertions",
  "thiserror",
  "uint",
+]
+
+[[package]]
+name = "drift-macros"
+version = "0.1.0"
+source = "git+https://github.com/drift-labs/drift-macros.git?rev=c57d87#c57d87e073d13d43f4d1fb09fe6822915a4ccc11"
+dependencies = [
+ "quote",
+ "syn 1.0.92",
 ]
 
 [[package]]

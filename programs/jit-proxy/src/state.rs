@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use borsh::{BorshDeserialize, BorshSerialize};
-use drift::instructions::PostOnlyParam as DriftPostOnlyParam;
+use drift::state::order_params::PostOnlyParam as DriftPostOnlyParam;
 use drift::state::user::MarketType as DriftMarketType;
 
 #[derive(Clone, Copy, BorshSerialize, BorshDeserialize, PartialEq, Debug, Eq)]
