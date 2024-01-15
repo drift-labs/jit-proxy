@@ -7,8 +7,8 @@ use drift::math::casting::Cast;
 use drift::math::constants::{BASE_PRECISION, MARGIN_PRECISION_U128, QUOTE_PRECISION};
 use drift::math::margin::MarginRequirementType;
 use drift::program::Drift;
-use drift::state::perp_market_map::MarketSet;
 use drift::state::order_params::{OrderParams, PostOnlyParam};
+use drift::state::perp_market_map::MarketSet;
 use std::ops::Deref;
 
 use drift::math::orders::find_bids_and_asks_from_users;

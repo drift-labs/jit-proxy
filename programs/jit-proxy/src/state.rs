@@ -8,6 +8,7 @@ pub enum PostOnlyParam {
     None,
     MustPostOnly, // Tx fails if order can't be post only
     TryPostOnly,  // Tx succeeds and order not placed if can't be post only
+    Slide,        // Modify price to be post only if can't be post only
 }
 
 impl PostOnlyParam {
@@ -16,6 +17,7 @@ impl PostOnlyParam {
             PostOnlyParam::None => DriftPostOnlyParam::None,
             PostOnlyParam::MustPostOnly => DriftPostOnlyParam::MustPostOnly,
             PostOnlyParam::TryPostOnly => DriftPostOnlyParam::TryPostOnly,
+            PostOnlyParam::Slide => DriftPostOnlyParam::Slide,
         }
     }
 }
