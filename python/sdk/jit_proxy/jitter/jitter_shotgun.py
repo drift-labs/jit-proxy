@@ -57,6 +57,9 @@ class JitterShotgun(BaseJitter):
                 self.logger.info(f"Trying to fill {order_sig} -> Attempt: {i + 1}")
 
                 try:
+                    if params.max_position == 0:
+                        break
+            
                     sig = await self.jit_proxy_client.jit(
                         JitIxParams(
                             taker_key,
