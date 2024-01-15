@@ -176,7 +176,7 @@ class JitterSniper(BaseJitter):
 
             for _ in range(3):
                 try:
-                    if params.max_position == 0:
+                    if params.max_position == 0 and params.min_position == 0:
                         break
             
                     tx_sig_and_slot = await self.jit_proxy_client.jit(
