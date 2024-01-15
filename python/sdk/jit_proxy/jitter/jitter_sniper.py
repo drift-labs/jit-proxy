@@ -192,7 +192,7 @@ class JitterSniper(BaseJitter):
                             params.price_type,
                             referrer_info,
                             params.sub_account_id,
-                            PostOnlyParams.MustPostOnly(),
+                            PostOnlyParams.TryPostOnly(),
                         }
                     )
 

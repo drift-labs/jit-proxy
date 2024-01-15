@@ -162,5 +162,5 @@ class JitProxyClient:
             return self.program.type["PostOnlyParam"].MustPostOnly()
         elif is_variant(post_only, "TryPostOnly"):
             return self.program.type["PostOnlyParam"].TryPostOnly()
-        else:
-            return getattr(self.program.type["PostOnlyParam"], 'None')()
+        elif is_variant(post_only, "Slide"):
+            return self.program.type["PostOnlyParam"].Slide()
