@@ -126,7 +126,7 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
         reduce_only: false,
         post_only: params
             .post_only
-            .unwrap_or(PostOnlyParam::MustPostOnly)
+            .unwrap_or(PostOnlyParam::Slide)
             .to_drift_param(),
         immediate_or_cancel: true,
         max_ts: None,
