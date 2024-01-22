@@ -7,15 +7,18 @@ use drift::math::casting::Cast;
 use drift::math::safe_math::SafeMath;
 use drift::program::Drift;
 use drift::state::order_params::OrderParams;
-use drift::state::perp_market_map::MarketSet;
 use drift::state::state::State;
 use drift::state::user::{MarketType as DriftMarketType, OrderTriggerCondition, OrderType};
 use drift::state::user::{User, UserStats};
+use std::collections::BTreeSet;
 
 use crate::error::ErrorCode;
 use crate::state::{PostOnlyParam, PriceType};
 
-pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams) -> Result<()> {
+pub fn jit<'c: 'info, 'info>(
+    ctx: Context<'_, '_, 'c, 'info, Jit<'info>>,
+    params: JitParams,
+) -> Result<()> {
     let clock = Clock::get()?;
     let slot = clock.slot;
 
@@ -36,8 +39,8 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
         mut oracle_map,
     } = load_maps(
         remaining_accounts_iter,
-        &MarketSet::new(),
-        &MarketSet::new(),
+        &BTreeSet::new(),
+        &BTreeSet::new(),
         slot,
         None,
     )?;
