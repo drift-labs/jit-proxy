@@ -181,7 +181,7 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
         // taker order failed to fill
         msg!("taker order failed to fill");
         msg!(
-            "taker price = {} maker price ={} oracle price {}",
+            "taker price = {} maker price = {} oracle price {}",
             taker_price,
             maker_price,
             oracle_price
