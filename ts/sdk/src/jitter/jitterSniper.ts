@@ -188,6 +188,10 @@ export class JitterSniper extends BaseJitter {
 				let i = 0;
 				while (i < 3) {
 					try {
+						const txParams = {
+							computeUnits: this.computeUnits,
+							computeUnitsPrice: this.computeUnitsPrice,
+						}
 						const { txSig } = await this.jitProxyClient.jit({
 							takerKey,
 							takerStatsKey,
@@ -201,7 +205,7 @@ export class JitterSniper extends BaseJitter {
 							priceType: params.priceType,
 							referrerInfo,
 							subAccountId: params.subAccountId,
-						});
+						}, txParams);
 
 						console.log(`Filled ${orderSignature} txSig ${txSig}`);
 						await sleep(3000);

@@ -66,6 +66,11 @@ export class JitterShotgun extends BaseJitter {
 				);
 				const referrerInfo = takerStats.getReferrerInfo();
 
+				const txParams = {
+					computeUnits: this.computeUnits,
+					computeUnitsPrice: this.computeUnitsPrice,
+				};
+
 				console.log(`Trying to fill ${orderSignature}`);
 				try {
 					const { txSig } = await this.jitProxyClient.jit({
@@ -81,7 +86,7 @@ export class JitterShotgun extends BaseJitter {
 						priceType: params.priceType,
 						referrerInfo,
 						subAccountId: params.subAccountId,
-					});
+					}, txParams);
 
 					console.log(`Filled ${orderSignature} txSig ${txSig}`);
 					await sleep(10000);

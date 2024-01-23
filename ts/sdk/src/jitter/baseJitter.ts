@@ -48,6 +48,9 @@ export abstract class BaseJitter {
 
 	userFilter: UserFilter;
 
+	computeUnits: number;
+	computeUnitsPrice: number;
+
 	constructor({
 		auctionSubscriber,
 		jitProxyClient,
@@ -189,5 +192,13 @@ export abstract class BaseJitter {
 
 	public setUserFilter(userFilter: UserFilter | undefined): void {
 		this.userFilter = userFilter;
+	}
+
+	public setComputeUnits(computeUnits: number): void {
+		this.computeUnits = computeUnits;
+	}
+
+	public setComputeUnitsPrice(computeUnitsPrice: number): void {
+		this.computeUnitsPrice = computeUnitsPrice;
 	}
 }
