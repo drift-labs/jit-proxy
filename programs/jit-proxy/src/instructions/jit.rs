@@ -168,7 +168,26 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
     drop(taker);
     drop(maker);
 
-    place_and_make(ctx, params.taker_order_id, order_params)?;
+    place_and_make(&ctx, params.taker_order_id, order_params)?;
+
+    let taker = ctx.accounts.taker.load()?;
+
+    let taker_base_asset_amount_unfilled_after = match taker.get_order(params.taker_order_id) {
+        Some(order) => order.get_base_asset_amount_unfilled(None)?,
+        None => 0,
+    };
+
+    if taker_base_asset_amount_unfilled_after == taker_base_asset_amount_unfilled {
+        // taker order failed to fill
+        msg!("taker order failed to fill");
+        msg!(
+            "taker price = {} maker price ={} oracle price {}",
+            taker_price,
+            maker_price,
+            oracle_price
+        );
+        return Err(ErrorCode::NoFill.into());
+    }
 
     Ok(())
 }
@@ -331,7 +350,7 @@ mod tests {
 }
 
 fn place_and_make<'info>(
-    ctx: Context<'_, '_, '_, 'info, Jit<'info>>,
+    ctx: &Context<'_, '_, '_, 'info, Jit<'info>>,
     taker_order_id: u32,
     order_params: OrderParams,
 ) -> Result<()> {
