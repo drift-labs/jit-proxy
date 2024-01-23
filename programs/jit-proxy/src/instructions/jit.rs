@@ -42,20 +42,44 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
         None,
     )?;
 
-    let (oracle_price, tick_size) = if market_type == DriftMarketType::Perp {
+    let (oracle_price, tick_size, min_order_size) = if market_type == DriftMarketType::Perp {
         let perp_market = perp_market_map.get_ref(&market_index)?;
         let oracle_price = oracle_map.get_price_data(&perp_market.amm.oracle)?.price;
 
-        (oracle_price, perp_market.amm.order_tick_size)
+        (
+            oracle_price,
+            perp_market.amm.order_tick_size,
+            perp_market.amm.min_order_size,
+        )
     } else {
         let spot_market = spot_market_map.get_ref(&market_index)?;
         let oracle_price = oracle_map.get_price_data(&spot_market.oracle)?.price;
 
-        (oracle_price, spot_market.order_tick_size)
+        (
+            oracle_price,
+            spot_market.order_tick_size,
+            spot_market.min_order_size,
+        )
     };
 
     let taker_price =
-        taker_order.force_get_limit_price(Some(oracle_price), None, slot, tick_size)?;
+        match taker_order.get_limit_price(Some(oracle_price), None, slot, tick_size)? {
+            Some(price) => price,
+            None if market_type == DriftMarketType::Perp => {
+                // if the order doesn't have a price, drift users amm price for taker price
+                let perp_market = perp_market_map.get_ref(&market_index)?;
+                let reserve_price = perp_market.amm.reserve_price()?;
+                match taker_direction {
+                    PositionDirection::Long => perp_market.amm.ask_price(reserve_price)?,
+                    PositionDirection::Short => perp_market.amm.bid_price(reserve_price)?,
+                }
+            }
+            None => {
+                // Shouldnt be possible for spot
+                msg!("taker order didnt have price");
+                return Err(ErrorCode::TakerOrderNotFound.into());
+            }
+        };
 
     let maker_direction = taker_direction.opposite();
     let maker_worst_price = params.get_worst_price(oracle_price, taker_direction)?;
@@ -83,7 +107,9 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
     }
     let maker_price = taker_price;
 
-    let taker_base_asset_amount_unfilled = taker_order.get_base_asset_amount_unfilled(None)?;
+    let taker_base_asset_amount_unfilled = taker_order
+        .get_base_asset_amount_unfilled(None)?
+        .max(min_order_size);
     let maker_existing_position = if market_type == DriftMarketType::Perp {
         let perp_market = perp_market_map.get_ref(&market_index)?;
         let perp_position = maker.get_perp_position(market_index);
@@ -108,6 +134,7 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
         maker_direction,
         taker_base_asset_amount_unfilled,
         maker_existing_position,
+        min_order_size,
     ) {
         Ok(size) => size,
         Err(e) => {
@@ -141,7 +168,26 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
     drop(taker);
     drop(maker);
 
-    place_and_make(ctx, params.taker_order_id, order_params)?;
+    place_and_make(&ctx, params.taker_order_id, order_params)?;
+
+    let taker = ctx.accounts.taker.load()?;
+
+    let taker_base_asset_amount_unfilled_after = match taker.get_order(params.taker_order_id) {
+        Some(order) => order.get_base_asset_amount_unfilled(None)?,
+        None => 0,
+    };
+
+    if taker_base_asset_amount_unfilled_after == taker_base_asset_amount_unfilled {
+        // taker order failed to fill
+        msg!("taker order failed to fill");
+        msg!(
+            "taker price = {} maker price = {} oracle price {}",
+            taker_price,
+            maker_price,
+            oracle_price
+        );
+        return Err(ErrorCode::NoFill.into());
+    }
 
     Ok(())
 }
@@ -210,15 +256,17 @@ fn check_position_limits(
     maker_direction: PositionDirection,
     taker_base_asset_amount_unfilled: u64,
     maker_existing_position: i64,
+    min_order_size: u64,
 ) -> Result<u64> {
     if maker_direction == PositionDirection::Long {
         let size = params.max_position.safe_sub(maker_existing_position)?;
 
-        if size <= 0 {
+        if size <= min_order_size.cast()? {
             msg!(
-                "maker existing position {} >= max position {}",
+                "maker existing position {} >= max position {} + min order size {}",
                 maker_existing_position,
-                params.max_position
+                params.max_position,
+                min_order_size
             );
             return Err(ErrorCode::PositionLimitBreached.into());
         }
@@ -227,11 +275,12 @@ fn check_position_limits(
     } else {
         let size = maker_existing_position.safe_sub(params.min_position)?;
 
-        if size <= 0 {
+        if size <= min_order_size.cast()? {
             msg!(
-                "maker existing position {} <= min position {}",
+                "maker existing position {} <= min position {} + min order size {}",
                 maker_existing_position,
-                params.min_position
+                params.min_position,
+                min_order_size
             );
             return Err(ErrorCode::PositionLimitBreached.into());
         }
@@ -253,55 +302,55 @@ mod tests {
         };
 
         // same direction, doesn't breach
-        let result = check_position_limits(params, PositionDirection::Long, 10, 40);
+        let result = check_position_limits(params, PositionDirection::Long, 10, 40, 0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 10);
-        let result = check_position_limits(params, PositionDirection::Short, 10, -40);
+        let result = check_position_limits(params, PositionDirection::Short, 10, -40, 0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 10);
 
         // same direction, whole order breaches, only takes enough to hit limit
-        let result = check_position_limits(params, PositionDirection::Long, 100, 40);
+        let result = check_position_limits(params, PositionDirection::Long, 100, 40, 0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 60);
-        let result = check_position_limits(params, PositionDirection::Short, 100, -40);
+        let result = check_position_limits(params, PositionDirection::Short, 100, -40, 0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 60);
 
         // opposite direction, doesn't breach
-        let result = check_position_limits(params, PositionDirection::Long, 10, -40);
+        let result = check_position_limits(params, PositionDirection::Long, 10, -40, 0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 10);
-        let result = check_position_limits(params, PositionDirection::Short, 10, 40);
+        let result = check_position_limits(params, PositionDirection::Short, 10, 40, 0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 10);
 
         // opposite direction, whole order breaches, only takes enough to take flipped limit
-        let result = check_position_limits(params, PositionDirection::Long, 200, -40);
+        let result = check_position_limits(params, PositionDirection::Long, 200, -40, 0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 140);
-        let result = check_position_limits(params, PositionDirection::Short, 200, 40);
+        let result = check_position_limits(params, PositionDirection::Short, 200, 40, 0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 140);
 
         // opposite direction, maker already breached, allows reducing
-        let result = check_position_limits(params, PositionDirection::Long, 200, -150);
+        let result = check_position_limits(params, PositionDirection::Long, 200, -150, 0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 200);
-        let result = check_position_limits(params, PositionDirection::Short, 200, 150);
+        let result = check_position_limits(params, PositionDirection::Short, 200, 150, 0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 200);
 
         // same direction, maker already breached, errors
-        let result = check_position_limits(params, PositionDirection::Long, 200, 150);
+        let result = check_position_limits(params, PositionDirection::Long, 200, 150, 0);
         assert!(result.is_err());
-        let result = check_position_limits(params, PositionDirection::Short, 200, -150);
+        let result = check_position_limits(params, PositionDirection::Short, 200, -150, 0);
         assert!(result.is_err());
     }
 }
 
 fn place_and_make<'info>(
-    ctx: Context<'_, '_, '_, 'info, Jit<'info>>,
+    ctx: &Context<'_, '_, '_, 'info, Jit<'info>>,
     taker_order_id: u32,
     order_params: OrderParams,
 ) -> Result<()> {
