@@ -42,16 +42,16 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
         None,
     )?;
 
-    let (oracle_price, tick_size) = if market_type == DriftMarketType::Perp {
+    let (oracle_price, tick_size, min_order_size) = if market_type == DriftMarketType::Perp {
         let perp_market = perp_market_map.get_ref(&market_index)?;
         let oracle_price = oracle_map.get_price_data(&perp_market.amm.oracle)?.price;
 
-        (oracle_price, perp_market.amm.order_tick_size)
+        (oracle_price, perp_market.amm.order_tick_size, perp_market.amm.min_order_size)
     } else {
         let spot_market = spot_market_map.get_ref(&market_index)?;
         let oracle_price = oracle_map.get_price_data(&spot_market.oracle)?.price;
 
-        (oracle_price, spot_market.order_tick_size)
+        (oracle_price, spot_market.order_tick_size, spot_market.min_order_size)
     };
 
     let taker_price =
@@ -83,7 +83,7 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
     }
     let maker_price = taker_price;
 
-    let taker_base_asset_amount_unfilled = taker_order.get_base_asset_amount_unfilled(None)?;
+    let taker_base_asset_amount_unfilled = taker_order.get_base_asset_amount_unfilled(None)?.max(min_order_size);
     let maker_existing_position = if market_type == DriftMarketType::Perp {
         let perp_market = perp_market_map.get_ref(&market_index)?;
         let perp_position = maker.get_perp_position(market_index);
@@ -108,6 +108,7 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
         maker_direction,
         taker_base_asset_amount_unfilled,
         maker_existing_position,
+        min_order_size,
     ) {
         Ok(size) => size,
         Err(e) => {
@@ -210,15 +211,17 @@ fn check_position_limits(
     maker_direction: PositionDirection,
     taker_base_asset_amount_unfilled: u64,
     maker_existing_position: i64,
+    min_order_size: u64,
 ) -> Result<u64> {
     if maker_direction == PositionDirection::Long {
         let size = params.max_position.safe_sub(maker_existing_position)?;
 
-        if size <= 0 {
+        if size <= min_order_size.cast()? {
             msg!(
-                "maker existing position {} >= max position {}",
+                "maker existing position {} >= max position {} + min order size {}",
                 maker_existing_position,
-                params.max_position
+                params.max_position,
+                min_order_size
             );
             return Err(ErrorCode::PositionLimitBreached.into());
         }
@@ -227,11 +230,12 @@ fn check_position_limits(
     } else {
         let size = maker_existing_position.safe_sub(params.min_position)?;
 
-        if size <= 0 {
+        if size <= min_order_size.cast()? {
             msg!(
-                "maker existing position {} <= min position {}",
+                "maker existing position {} <= min position {} + min order size {}",
                 maker_existing_position,
-                params.min_position
+                params.min_position,
+                min_order_size
             );
             return Err(ErrorCode::PositionLimitBreached.into());
         }
