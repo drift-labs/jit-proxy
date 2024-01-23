@@ -46,12 +46,20 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
         let perp_market = perp_market_map.get_ref(&market_index)?;
         let oracle_price = oracle_map.get_price_data(&perp_market.amm.oracle)?.price;
 
-        (oracle_price, perp_market.amm.order_tick_size, perp_market.amm.min_order_size)
+        (
+            oracle_price,
+            perp_market.amm.order_tick_size,
+            perp_market.amm.min_order_size,
+        )
     } else {
         let spot_market = spot_market_map.get_ref(&market_index)?;
         let oracle_price = oracle_map.get_price_data(&spot_market.oracle)?.price;
 
-        (oracle_price, spot_market.order_tick_size, spot_market.min_order_size)
+        (
+            oracle_price,
+            spot_market.order_tick_size,
+            spot_market.min_order_size,
+        )
     };
 
     let taker_price =
@@ -83,7 +91,9 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
     }
     let maker_price = taker_price;
 
-    let taker_base_asset_amount_unfilled = taker_order.get_base_asset_amount_unfilled(None)?.max(min_order_size);
+    let taker_base_asset_amount_unfilled = taker_order
+        .get_base_asset_amount_unfilled(None)?
+        .max(min_order_size);
     let maker_existing_position = if market_type == DriftMarketType::Perp {
         let perp_market = perp_market_map.get_ref(&market_index)?;
         let perp_position = maker.get_perp_position(market_index);
@@ -257,49 +267,49 @@ mod tests {
         };
 
         // same direction, doesn't breach
-        let result = check_position_limits(params, PositionDirection::Long, 10, 40);
+        let result = check_position_limits(params, PositionDirection::Long, 10, 40, 0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 10);
-        let result = check_position_limits(params, PositionDirection::Short, 10, -40);
+        let result = check_position_limits(params, PositionDirection::Short, 10, -40, 0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 10);
 
         // same direction, whole order breaches, only takes enough to hit limit
-        let result = check_position_limits(params, PositionDirection::Long, 100, 40);
+        let result = check_position_limits(params, PositionDirection::Long, 100, 40, 0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 60);
-        let result = check_position_limits(params, PositionDirection::Short, 100, -40);
+        let result = check_position_limits(params, PositionDirection::Short, 100, -40, 0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 60);
 
         // opposite direction, doesn't breach
-        let result = check_position_limits(params, PositionDirection::Long, 10, -40);
+        let result = check_position_limits(params, PositionDirection::Long, 10, -40, 0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 10);
-        let result = check_position_limits(params, PositionDirection::Short, 10, 40);
+        let result = check_position_limits(params, PositionDirection::Short, 10, 40, 0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 10);
 
         // opposite direction, whole order breaches, only takes enough to take flipped limit
-        let result = check_position_limits(params, PositionDirection::Long, 200, -40);
+        let result = check_position_limits(params, PositionDirection::Long, 200, -40, 0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 140);
-        let result = check_position_limits(params, PositionDirection::Short, 200, 40);
+        let result = check_position_limits(params, PositionDirection::Short, 200, 40, 0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 140);
 
         // opposite direction, maker already breached, allows reducing
-        let result = check_position_limits(params, PositionDirection::Long, 200, -150);
+        let result = check_position_limits(params, PositionDirection::Long, 200, -150, 0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 200);
-        let result = check_position_limits(params, PositionDirection::Short, 200, 150);
+        let result = check_position_limits(params, PositionDirection::Short, 200, 150, 0);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 200);
 
         // same direction, maker already breached, errors
-        let result = check_position_limits(params, PositionDirection::Long, 200, 150);
+        let result = check_position_limits(params, PositionDirection::Long, 200, 150, 0);
         assert!(result.is_err());
-        let result = check_position_limits(params, PositionDirection::Short, 200, -150);
+        let result = check_position_limits(params, PositionDirection::Short, 200, -150, 0);
         assert!(result.is_err());
     }
 }
