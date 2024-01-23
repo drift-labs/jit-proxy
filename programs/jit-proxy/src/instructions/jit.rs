@@ -63,7 +63,23 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
     };
 
     let taker_price =
-        taker_order.force_get_limit_price(Some(oracle_price), None, slot, tick_size)?;
+        match taker_order.get_limit_price(Some(oracle_price), None, slot, tick_size)? {
+            Some(price) => price,
+            None if market_type == DriftMarketType::Perp => {
+                // if the order doesn't have a price, drift users amm price for taker price
+                let perp_market = perp_market_map.get_ref(&market_index)?;
+                let reserve_price = perp_market.amm.reserve_price()?;
+                match taker_direction {
+                    PositionDirection::Long => perp_market.amm.ask_price(reserve_price)?,
+                    PositionDirection::Short => perp_market.amm.bid_price(reserve_price)?,
+                }
+            }
+            None => {
+                // Shouldnt be possible for spot
+                msg!("taker order didnt have price");
+                return Err(ErrorCode::TakerOrderNotFound.into());
+            }
+        };
 
     let maker_direction = taker_direction.opposite();
     let maker_worst_price = params.get_worst_price(oracle_price, taker_direction)?;
