@@ -10,7 +10,7 @@ from solders.pubkey import Pubkey
 from driftpy.types import is_variant, UserAccount, Order, UserStatsAccount, ReferrerInfo
 from driftpy.drift_client import DriftClient
 from driftpy.auction_subscriber.auction_subscriber import AuctionSubscriber
-from driftpy.addresses import get_user_stats_account_public_key
+from driftpy.addresses import get_user_stats_account_public_key, get_user_account_public_key
 from driftpy.math.orders import has_auction_price
 from driftpy.math.conversion import convert_to_number
 
@@ -204,8 +204,12 @@ class BaseJitter(ABC):
             return None
         else:
             return ReferrerInfo(
-                taker_stats.referrer,
+                get_user_account_public_key(
+                    self.drift_client.program_id, # type: ignore
+                    taker_stats.referrer,
+                    0
+                ),
                 get_user_stats_account_public_key(
-                    self.drift_client.program_id, taker_stats.referrer
+                    self.drift_client.program_id, taker_stats.referrer # type: ignore
                 ),
             )
