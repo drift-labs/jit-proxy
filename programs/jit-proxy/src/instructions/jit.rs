@@ -42,6 +42,14 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
         slots_left
     );
 
+    msg!(
+        "order type {:?} auction start {} auction end {} limit price {}",
+        taker_order.order_type,
+        taker_order.auction_start_price,
+        taker_order.auction_end_price,
+        taker_order.price
+    );
+
     let remaining_accounts_iter = &mut ctx.remaining_accounts.iter().peekable();
     let AccountMaps {
         perp_market_map,
