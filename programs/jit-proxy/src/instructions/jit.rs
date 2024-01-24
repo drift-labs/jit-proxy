@@ -29,6 +29,19 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
     let market_index = taker_order.market_index;
     let taker_direction = taker_order.direction;
 
+    let slots_left = slot.cast::<i64>()?.safe_sub(
+        taker_order
+            .slot
+            .safe_add(taker_order.auction_duration.cast()?)?
+            .cast()?,
+    )?;
+    msg!(
+        "order slot = {} auction duration = {} slots_left = {}",
+        slot,
+        taker_order.auction_duration,
+        slots_left
+    );
+
     let remaining_accounts_iter = &mut ctx.remaining_accounts.iter().peekable();
     let AccountMaps {
         perp_market_map,
@@ -66,6 +79,7 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
         match taker_order.get_limit_price(Some(oracle_price), None, slot, tick_size)? {
             Some(price) => price,
             None if market_type == DriftMarketType::Perp => {
+                msg!("taker order didnt have price. deriving fallback");
                 // if the order doesn't have a price, drift users amm price for taker price
                 let perp_market = perp_market_map.get_ref(&market_index)?;
                 let reserve_price = perp_market.amm.reserve_price()?;
