@@ -21,6 +21,4 @@ pub enum ErrorCode {
     UnprofitableArb,
     #[msg("PositionLimitBreached")]
     PositionLimitBreached,
-    #[msg("NoFill")]
-    NoFill,
 }
