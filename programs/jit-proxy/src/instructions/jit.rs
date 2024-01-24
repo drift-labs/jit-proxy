@@ -36,7 +36,7 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
             .cast()?,
     )?;
     msg!(
-        "order slot = {} auction duration = {} slots_left = {}",
+        "slot = {} auction duration = {} slots_left = {}",
         slot,
         taker_order.auction_duration,
         slots_left
