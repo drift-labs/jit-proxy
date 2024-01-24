@@ -67,14 +67,11 @@ export abstract class BaseJitter {
 		this.jitProxyClient = jitProxyClient;
 		this.userStatsMap =
 			userStatsMap ||
-			new UserStatsMap(this.driftClient, {
-				type: 'polling',
-				accountLoader: new BulkAccountLoader(
-					this.driftClient.connection,
-					'confirmed',
-					0
-				),
-			});
+			new UserStatsMap(this.driftClient, new BulkAccountLoader(
+				this.driftClient.connection,
+				'confirmed',
+				0
+			));
 	}
 
 	async subscribe(): Promise<void> {
