@@ -65,7 +65,7 @@ export class JitterSniper extends BaseJitter {
 		return async () => {
 			const params = this.perpParams.get(order.marketIndex);
 			if (!params) {
-				this.onGoingAuctions.delete(orderSignature);
+				this.deleteOnGoingAuction(orderSignature);
 				return;
 			}
 
@@ -100,7 +100,7 @@ export class JitterSniper extends BaseJitter {
 								order.marketType
 							)}-${order.marketIndex}) too much`
 						);
-						this.onGoingAuctions.delete(orderSignature);
+						this.deleteOnGoingAuction(orderSignature);
 						return;
 					}
 				} else if (
@@ -113,7 +113,7 @@ export class JitterSniper extends BaseJitter {
 								order.marketType
 							)}-${order.marketIndex}) too much`
 						);
-						this.onGoingAuctions.delete(orderSignature);
+						this.deleteOnGoingAuction(orderSignature);
 						return;
 					}
 				}
@@ -152,7 +152,7 @@ export class JitterSniper extends BaseJitter {
 			).then(async ({ slot, updatedDetails }) => {
 				if (slot === -1) {
 					console.log('Auction expired without crossing');
-					this.onGoingAuctions.delete(orderSignature);
+					this.deleteOnGoingAuction(orderSignature);
 					return;
 				}
 
@@ -209,7 +209,7 @@ export class JitterSniper extends BaseJitter {
 
 						console.log(`Filled ${orderSignature} txSig ${txSig}`);
 						await sleep(3000);
-						this.onGoingAuctions.delete(orderSignature);
+						this.deleteOnGoingAuction(orderSignature);
 						return;
 					} catch (e) {
 						console.error(`Failed to fill ${orderSignature}`);
@@ -221,7 +221,7 @@ export class JitterSniper extends BaseJitter {
 							console.log('Oracle invalid');
 						} else {
 							await sleep(3000);
-							this.onGoingAuctions.delete(orderSignature);
+							this.deleteOnGoingAuction(orderSignature);
 							return;
 						}
 					}
@@ -229,7 +229,7 @@ export class JitterSniper extends BaseJitter {
 					i++;
 				}
 			});
-			this.onGoingAuctions.delete(orderSignature);
+			this.deleteOnGoingAuction(orderSignature);
 		};
 	}
 

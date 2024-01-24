@@ -57,7 +57,7 @@ export class JitterShotgun extends BaseJitter {
 			while (i < 10) {
 				const params = this.perpParams.get(order.marketIndex);
 				if (!params) {
-					this.onGoingAuctions.delete(orderSignature);
+					this.deleteOnGoingAuction(orderSignature);
 					return;
 				}
 
@@ -90,7 +90,7 @@ export class JitterShotgun extends BaseJitter {
 
 					console.log(`Filled ${orderSignature} txSig ${txSig}`);
 					await sleep(10000);
-					this.onGoingAuctions.delete(orderSignature);
+					this.deleteOnGoingAuction(orderSignature);
 					return;
 				} catch (e) {
 					console.error(`Failed to fill ${orderSignature}`);
@@ -102,7 +102,7 @@ export class JitterShotgun extends BaseJitter {
 						console.log('Oracle invalid, retrying');
 					} else {
 						await sleep(10000);
-						this.onGoingAuctions.delete(orderSignature);
+						this.deleteOnGoingAuction(orderSignature);
 						return;
 					}
 				}
@@ -110,7 +110,7 @@ export class JitterShotgun extends BaseJitter {
 				i++;
 			}
 
-			this.onGoingAuctions.delete(orderSignature);
+			this.deleteOnGoingAuction(orderSignature);
 		};
 	}
 }

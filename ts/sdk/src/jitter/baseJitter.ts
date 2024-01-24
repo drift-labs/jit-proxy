@@ -44,6 +44,7 @@ export abstract class BaseJitter {
 	perpParams = new Map<number, JitParams>();
 	spotParams = new Map<number, JitParams>();
 
+	seenOrders = new Set<string>();
 	onGoingAuctions = new Map<string, Promise<void>>();
 
 	userFilter: UserFilter;
@@ -106,6 +107,11 @@ export abstract class BaseJitter {
 						takerKeyString,
 						order.orderId
 					);
+
+					if (this.seenOrders.has(orderSignature)) {
+						continue;
+					}
+					this.seenOrders.add(orderSignature);
 
 					if (this.onGoingAuctions.has(orderSignature)) {
 						continue;
@@ -173,6 +179,11 @@ export abstract class BaseJitter {
 		orderSignature: string
 	): () => Promise<void> {
 		throw new Error('Not implemented');
+	}
+
+	deleteOnGoingAuction(orderSignature: string): void {
+		this.onGoingAuctions.delete(orderSignature);
+		this.seenOrders.delete(orderSignature);
 	}
 
 	getOrderSignatures(takerKey: string, orderId: number): string {
