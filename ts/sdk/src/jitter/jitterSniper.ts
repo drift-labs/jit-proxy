@@ -6,6 +6,7 @@ import {
 	DriftClient,
 	getAuctionPrice,
 	getAuctionPriceForOracleOffsetAuction,
+	getLimitPrice,
 	getVariant,
 	isVariant,
 	OraclePriceData,
@@ -191,21 +192,24 @@ export class JitterSniper extends BaseJitter {
 						const txParams = {
 							computeUnits: this.computeUnits,
 							computeUnitsPrice: this.computeUnitsPrice,
-						}
-						const { txSig } = await this.jitProxyClient.jit({
-							takerKey,
-							takerStatsKey,
-							taker,
-							takerOrderId: order.orderId,
-							maxPosition: params.maxPosition,
-							minPosition: params.minPosition,
-							bid: params.bid,
-							ask: params.ask,
-							postOnly: null,
-							priceType: params.priceType,
-							referrerInfo,
-							subAccountId: params.subAccountId,
-						}, txParams);
+						};
+						const { txSig } = await this.jitProxyClient.jit(
+							{
+								takerKey,
+								takerStatsKey,
+								taker,
+								takerOrderId: order.orderId,
+								maxPosition: params.maxPosition,
+								minPosition: params.minPosition,
+								bid: params.bid,
+								ask: params.ask,
+								postOnly: null,
+								priceType: params.priceType,
+								referrerInfo,
+								subAccountId: params.subAccountId,
+							},
+							txParams
+						);
 
 						console.log(`Filled ${orderSignature} txSig ${txSig}`);
 						await sleep(3000);
@@ -308,6 +312,25 @@ export class JitterSniper extends BaseJitter {
 			slotsTilCross++;
 		}
 
+		// if it doesnt cross during auction, check if limit price crosses
+		if (!willCross) {
+			const slotAfterAuction = order.slot.toNumber() + order.auctionDuration + 1;
+			const limitPrice = getLimitPrice(order, oraclePrice, slotAfterAuction);
+			if (!limitPrice) {
+				willCross = true;
+				slotsTilCross = order.auctionDuration + 1;
+			} else {
+				const limitPriceNum = convertToNumber(limitPrice, PRICE_PRECISION);
+				if (makerOrderDir === 'buy' || limitPriceNum <= bid) {
+					willCross = true;
+					slotsTilCross = order.auctionDuration + 1;
+				} else if (makerOrderDir === 'sell' || limitPriceNum >= ask) {
+					willCross = true;
+					slotsTilCross = order.auctionDuration + 1;
+				}
+			}
+		}
+
 		return {
 			slotsTilCross,
 			willCross,
@@ -325,12 +348,12 @@ export class JitterSniper extends BaseJitter {
 		order: Order,
 		initialDetails: AuctionAndOrderDetails
 	): Promise<{ slot: number; updatedDetails: AuctionAndOrderDetails }> {
-		const auctionEndSlot = order.auctionDuration + order.slot.toNumber();
 		let currentDetails: AuctionAndOrderDetails = initialDetails;
 		let willCross = initialDetails.willCross;
-		if (this.slotSubscriber.currentSlot > auctionEndSlot) {
+		if (this.slotSubscriber.currentSlot > targetSlot) {
+			const slot = willCross ? this.slotSubscriber.currentSlot : -1;
 			return new Promise((resolve) =>
-				resolve({ slot: -1, updatedDetails: currentDetails })
+				resolve({ slot, updatedDetails: currentDetails })
 			);
 		}
 
@@ -348,13 +371,14 @@ export class JitterSniper extends BaseJitter {
 
 			// Update target slot as the bid/ask and the oracle changes
 			const intervalId = setInterval(async () => {
-				if (this.slotSubscriber.currentSlot >= auctionEndSlot) {
+				if (this.slotSubscriber.currentSlot >= targetSlot) {
 					this.slotSubscriber.eventEmitter.removeListener(
 						'newSlot',
 						slotListener
 					);
 					clearInterval(intervalId);
-					resolve({ slot: -1, updatedDetails: currentDetails });
+					const slot = willCross ? this.slotSubscriber.currentSlot : -1;
+					resolve({ slot, updatedDetails: currentDetails });
 				}
 
 				currentDetails = this.getAuctionAndOrderDetails(order);

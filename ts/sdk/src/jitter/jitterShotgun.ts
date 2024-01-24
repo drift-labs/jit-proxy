@@ -73,20 +73,23 @@ export class JitterShotgun extends BaseJitter {
 
 				console.log(`Trying to fill ${orderSignature}`);
 				try {
-					const { txSig } = await this.jitProxyClient.jit({
-						takerKey,
-						takerStatsKey,
-						taker,
-						takerOrderId: order.orderId,
-						maxPosition: params.maxPosition,
-						minPosition: params.minPosition,
-						bid: params.bid,
-						ask: params.ask,
-						postOnly: null,
-						priceType: params.priceType,
-						referrerInfo,
-						subAccountId: params.subAccountId,
-					}, txParams);
+					const { txSig } = await this.jitProxyClient.jit(
+						{
+							takerKey,
+							takerStatsKey,
+							taker,
+							takerOrderId: order.orderId,
+							maxPosition: params.maxPosition,
+							minPosition: params.minPosition,
+							bid: params.bid,
+							ask: params.ask,
+							postOnly: null,
+							priceType: params.priceType,
+							referrerInfo,
+							subAccountId: params.subAccountId,
+						},
+						txParams
+					);
 
 					console.log(`Filled ${orderSignature} txSig ${txSig}`);
 					await sleep(10000);
