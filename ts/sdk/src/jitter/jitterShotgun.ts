@@ -96,7 +96,9 @@ export class JitterShotgun extends BaseJitter {
 					console.error(`Failed to fill ${orderSignature}`);
 					if (e.message.includes('0x1770') || e.message.includes('0x1771')) {
 						console.log('Order does not cross params yet, retrying');
-					} else if (e.message.includes('0x1793')) {
+					} else if (e.message.includes('0x1779')) {
+						console.log('Order could not fill');
+					}  else if (e.message.includes('0x1793')) {
 						console.log('Oracle invalid, retrying');
 					} else {
 						await sleep(10000);
@@ -104,6 +106,7 @@ export class JitterShotgun extends BaseJitter {
 						return;
 					}
 				}
+				await sleep(200);
 				i++;
 			}
 

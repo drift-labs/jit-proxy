@@ -186,7 +186,7 @@ export class JitterSniper extends BaseJitter {
 				)}
 				`);
 				let i = 0;
-				while (i < 3) {
+				while (i < 10) {
 					try {
 						const txParams = {
 							computeUnits: this.computeUnits,
@@ -215,6 +215,8 @@ export class JitterSniper extends BaseJitter {
 						console.error(`Failed to fill ${orderSignature}`);
 						if (e.message.includes('0x1770') || e.message.includes('0x1771')) {
 							console.log('Order does not cross params yet');
+						} else if (e.message.includes('0x1779')) {
+							console.log('Order could not fill');
 						} else if (e.message.includes('0x1793')) {
 							console.log('Oracle invalid');
 						} else {
@@ -223,7 +225,7 @@ export class JitterSniper extends BaseJitter {
 							return;
 						}
 					}
-					await sleep(50);
+					await sleep(200);
 					i++;
 				}
 			});
