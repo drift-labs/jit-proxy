@@ -2,28 +2,13 @@ import { JitProxyClient, PriceType } from '../jitProxyClient';
 import { PublicKey } from '@solana/web3.js';
 import {
 	AuctionSubscriber,
-	BN,
 	DriftClient,
 	Order,
+	PostOnlyParams,
 	UserAccount,
 	UserStatsMap,
 } from '@drift-labs/sdk';
 import { BaseJitter } from './baseJitter';
-
-export type UserFilter = (
-	userAccount: UserAccount,
-	userKey: string,
-	order: Order
-) => boolean;
-
-export type JitParams = {
-	bid: BN;
-	ask: BN;
-	minPosition: BN;
-	maxPosition;
-	priceType: PriceType;
-	subAccountId?: number;
-};
 
 export class JitterShotgun extends BaseJitter {
 	constructor({
@@ -83,7 +68,7 @@ export class JitterShotgun extends BaseJitter {
 							minPosition: params.minPosition,
 							bid: params.bid,
 							ask: params.ask,
-							postOnly: null,
+							postOnly: params.postOnlyParams ?? PostOnlyParams.MUST_POST_ONLY,
 							priceType: params.priceType,
 							referrerInfo,
 							subAccountId: params.subAccountId,

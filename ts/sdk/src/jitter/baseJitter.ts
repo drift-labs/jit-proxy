@@ -5,17 +5,12 @@ import {
 	AuctionSubscriber,
 	BN,
 	BulkAccountLoader,
-	convertToNumber,
 	DriftClient,
-	getAuctionPrice,
-	getAuctionPriceForOracleOffsetAuction,
 	getUserStatsAccountPublicKey,
 	hasAuctionPrice,
 	isVariant,
-	OraclePriceData,
 	Order,
-	PRICE_PRECISION,
-	SlotSubscriber,
+	PostOnlyParams,
 	UserAccount,
 	UserStatsMap,
 } from '@drift-labs/sdk';
@@ -33,6 +28,7 @@ export type JitParams = {
 	maxPosition;
 	priceType: PriceType;
 	subAccountId?: number;
+	postOnlyParams?: PostOnlyParams;
 };
 
 export abstract class BaseJitter {
