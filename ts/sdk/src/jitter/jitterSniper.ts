@@ -312,7 +312,7 @@ export class JitterSniper extends BaseJitter {
 
 		// if it doesnt cross during auction, check if limit price crosses
 		if (!willCross) {
-			const slotAfterAuction = order.slot.toNumber() + order.auctionDuration;
+			const slotAfterAuction = order.slot.toNumber() + order.auctionDuration + 1;
 			const limitPrice = getLimitPrice(order, oraclePrice, slotAfterAuction);
 			if (!limitPrice) {
 				willCross = true;
