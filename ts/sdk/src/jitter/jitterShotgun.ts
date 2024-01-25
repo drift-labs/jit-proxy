@@ -86,7 +86,7 @@ export class JitterShotgun extends BaseJitter {
 						console.log('Order does not cross params yet, retrying');
 					} else if (e.message.includes('0x1779')) {
 						console.log('Order could not fill');
-					}  else if (e.message.includes('0x1793')) {
+					} else if (e.message.includes('0x1793')) {
 						console.log('Oracle invalid, retrying');
 					} else {
 						await sleep(10000);

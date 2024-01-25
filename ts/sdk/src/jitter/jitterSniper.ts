@@ -89,9 +89,9 @@ export class JitterSniper extends BaseJitter {
 
 			// don't increase risk if we're past max positions
 			if (isVariant(order.marketType, 'perp')) {
-				const currPerpPos = this.driftClient
-					.getUser()
-					.getPerpPosition(order.marketIndex);
+				const currPerpPos =
+					this.driftClient.getUser().getPerpPosition(order.marketIndex) ||
+					this.driftClient.getUser().getEmptyPosition(order.marketIndex);
 				if (
 					currPerpPos.baseAssetAmount.lt(ZERO) &&
 					isVariant(order.direction, 'short')
@@ -204,7 +204,8 @@ export class JitterSniper extends BaseJitter {
 								minPosition: params.minPosition,
 								bid: params.bid,
 								ask: params.ask,
-								postOnly: params.postOnlyParams ?? PostOnlyParams.MUST_POST_ONLY,
+								postOnly:
+									params.postOnlyParams ?? PostOnlyParams.MUST_POST_ONLY,
 								priceType: params.priceType,
 								referrerInfo,
 								subAccountId: params.subAccountId,
@@ -315,7 +316,8 @@ export class JitterSniper extends BaseJitter {
 
 		// if it doesnt cross during auction, check if limit price crosses
 		if (!willCross) {
-			const slotAfterAuction = order.slot.toNumber() + order.auctionDuration + 1;
+			const slotAfterAuction =
+				order.slot.toNumber() + order.auctionDuration + 1;
 			const limitPrice = getLimitPrice(order, oraclePrice, slotAfterAuction);
 			if (!limitPrice) {
 				willCross = true;
