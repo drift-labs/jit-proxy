@@ -41,23 +41,14 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
         slots_left
     );
 
-    if taker_order.order_type == OrderType::Oracle {
-        msg!(
-            "order type {:?} auction start {} auction end {} oracle price offset {}",
-            taker_order.order_type,
-            taker_order.auction_start_price,
-            taker_order.auction_end_price,
-            taker_order.oracle_price_offset
-        );
-    } else {
-        msg!(
-            "order type {:?} auction start {} auction end {} limit price {}",
-            taker_order.order_type,
-            taker_order.auction_start_price,
-            taker_order.auction_end_price,
-            taker_order.price
-        );
-    }
+    msg!(
+        "order type {:?} auction start {} auction end {} limit price {} oracle price offset {}",
+        taker_order.order_type,
+        taker_order.auction_start_price,
+        taker_order.auction_end_price,
+        taker_order.price,
+        taker_order.oracle_price_offset
+    );
 
     let remaining_accounts_iter = &mut ctx.remaining_accounts.iter().peekable();
     let AccountMaps {
