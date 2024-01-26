@@ -29,12 +29,11 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
     let market_index = taker_order.market_index;
     let taker_direction = taker_order.direction;
 
-    let slots_left = slot.cast::<i64>()?.safe_sub(
-        taker_order
-            .slot
-            .safe_add(taker_order.auction_duration.cast()?)?
-            .cast()?,
-    )?;
+    let slots_left = taker_order
+        .slot
+        .safe_add(taker_order.auction_duration.cast()?)?
+        .cast::<i64>()?
+        .safe_sub(slot.cast()?)?;
     msg!(
         "slot = {} auction duration = {} slots_left = {}",
         slot,
@@ -43,11 +42,12 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
     );
 
     msg!(
-        "order type {:?} auction start {} auction end {} limit price {}",
+        "taker order type {:?} auction start {} auction end {} limit price {} oracle price offset {}",
         taker_order.order_type,
         taker_order.auction_start_price,
         taker_order.auction_end_price,
-        taker_order.price
+        taker_order.price,
+        taker_order.oracle_price_offset
     );
 
     let remaining_accounts_iter = &mut ctx.remaining_accounts.iter().peekable();
@@ -175,7 +175,7 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
         reduce_only: false,
         post_only: params
             .post_only
-            .unwrap_or(PostOnlyParam::Slide)
+            .unwrap_or(PostOnlyParam::MustPostOnly)
             .to_drift_param(),
         immediate_or_cancel: true,
         max_ts: None,
@@ -201,13 +201,22 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
 
     if taker_base_asset_amount_unfilled_after == taker_base_asset_amount_unfilled {
         // taker order failed to fill
-        msg!("taker order failed to fill");
         msg!(
-            "taker price = {} maker price = {} oracle price = {}",
+            "taker price = {} oracle price = {}",
             taker_price,
-            maker_price,
             oracle_price
         );
+        msg!("jit params {:?}", params);
+        if market_type == DriftMarketType::Perp {
+            let perp_market = perp_market_map.get_ref(&market_index)?;
+            let reserve_price = perp_market.amm.reserve_price()?;
+            let (bid_price, ask_price) = perp_market.amm.bid_ask_price(reserve_price)?;
+            msg!(
+                "vamm bid price = {} vamm ask price = {}",
+                bid_price,
+                ask_price
+            );
+        }
         return Err(ErrorCode::NoFill.into());
     }
 
