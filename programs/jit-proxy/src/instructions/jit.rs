@@ -13,7 +13,7 @@ use drift::state::user::{MarketType as DriftMarketType, OrderTriggerCondition, O
 use drift::state::user::{User, UserStats};
 
 use crate::error::ErrorCode;
-use crate::state::{MarketType, PostOnlyParam, PriceType};
+use crate::state::{PostOnlyParam, PriceType};
 
 pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams) -> Result<()> {
     let clock = Clock::get()?;
@@ -128,7 +128,7 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
         }
     }
 
-    let maker_price = if market_type == MarketType::Perp {
+    let maker_price = if market_type == DriftMarketType::Perp {
         let perp_market = perp_market_map.get_ref(&market_index)?;
         let reserve_price = perp_market.amm.reserve_price()?;
 
@@ -143,7 +143,7 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
                 }
             }
             PositionDirection::Short => {
-                perp_market.amm.ask_price(reserve_price)?;
+                let amm_ask_price = perp_market.amm.ask_price(reserve_price)?;
 
                 if taker_price >= amm_ask_price && amm_ask_price > maker_worst_price {
                     maker_price = amm_ask_price;
