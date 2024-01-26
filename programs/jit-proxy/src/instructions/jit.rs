@@ -13,7 +13,7 @@ use drift::state::user::{MarketType as DriftMarketType, OrderTriggerCondition, O
 use drift::state::user::{User, UserStats};
 
 use crate::error::ErrorCode;
-use crate::state::{PostOnlyParam, PriceType};
+use crate::state::{MarketType, PostOnlyParam, PriceType};
 
 pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams) -> Result<()> {
     let clock = Clock::get()?;
@@ -127,7 +127,34 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
             }
         }
     }
-    let maker_price = taker_price;
+
+    let maker_price = if market_type == MarketType::Perp {
+        let perp_market = perp_market_map.get_ref(&market_index)?;
+        let reserve_price = perp_market.amm.reserve_price()?;
+
+        let mut maker_price = taker_price;
+        match maker_direction {
+            PositionDirection::Long => {
+                let amm_bid_price = perp_market.amm.bid_price(reserve_price)?;
+
+                // if amm price is better than maker, use amm price to ensure fill
+                if taker_price <= amm_bid_price && amm_bid_price < maker_worst_price {
+                    maker_price = amm_bid_price;
+                }
+            }
+            PositionDirection::Short => {
+                perp_market.amm.ask_price(reserve_price)?;
+
+                if taker_price >= amm_ask_price && amm_ask_price > maker_worst_price {
+                    maker_price = amm_ask_price;
+                }
+            }
+        }
+
+        maker_price
+    } else {
+        taker_price
+    };
 
     let taker_base_asset_amount_unfilled = taker_order
         .get_base_asset_amount_unfilled(None)?
@@ -202,8 +229,9 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
     if taker_base_asset_amount_unfilled_after == taker_base_asset_amount_unfilled {
         // taker order failed to fill
         msg!(
-            "taker price = {} oracle price = {}",
+            "taker price = {} maker price = {} oracle price = {}",
             taker_price,
+            maker_price,
             oracle_price
         );
         msg!("jit params {:?}", params);
