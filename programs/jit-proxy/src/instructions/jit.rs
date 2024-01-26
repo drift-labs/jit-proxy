@@ -42,7 +42,7 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
     );
 
     msg!(
-        "order type {:?} auction start {} auction end {} limit price {} oracle price offset {}",
+        "taker order type {:?} auction start {} auction end {} limit price {} oracle price offset {}",
         taker_order.order_type,
         taker_order.auction_start_price,
         taker_order.auction_end_price,
