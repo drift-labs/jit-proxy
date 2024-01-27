@@ -205,6 +205,8 @@ class JitterSniper(BaseJitter):
                     self.logger.error(f"Failed to fill {order_sig}: {e}")
                     if "0x1770" in str(e) or "0x1771" in str(e):
                         self.logger.error("Order does not cross params yet")
+                    elif "0x1779" in str(e):
+                        self.logger.error("Order could not fill, retrying")
                     elif "0x1793" in str(e):
                         self.logger.error("Oracle invalid")
                     elif "0x1772" in str(e):

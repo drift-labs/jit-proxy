@@ -37,7 +37,13 @@ class JitterShotgun(BaseJitter):
         self.logger.info("JitterShotgun: Creating Try Fill")
 
         async def try_fill():
-            for i in range(10):
+            taker_stats = await get_user_stats_account(
+                self.drift_client.program, taker.authority
+            )
+
+            referrer_info = self.get_referrer_info(taker_stats)
+
+            for i in range(order.auction_duration):
                 params = (
                     self.perp_params.get(order.market_index)
                     if is_variant(order.market_type, "Perp")
@@ -47,12 +53,6 @@ class JitterShotgun(BaseJitter):
                 if params is None:
                     self.ongoing_auctions.pop(order_sig)
                     return
-
-                taker_stats = await get_user_stats_account(
-                    self.drift_client.program, taker.authority
-                )
-
-                referrer_info = self.get_referrer_info(taker_stats)
 
                 self.logger.info(f"Trying to fill {order_sig} -> Attempt: {i + 1}")
 
@@ -73,7 +73,7 @@ class JitterShotgun(BaseJitter):
                             params.price_type,
                             referrer_info,
                             params.sub_account_id,
-                            PostOnlyParams.TryPostOnly(),
+                            PostOnlyParams.MustPostOnly(),
                         )
                     )
 
@@ -86,6 +86,8 @@ class JitterShotgun(BaseJitter):
                     self.logger.error(f"Failed to fill Order: {order_sig}")
                     if "0x1770" in str(e) or "0x1771" in str(e):
                         self.logger.error(f"Order: {order_sig} does not cross params yet, retrying")
+                    elif "0x1779" in str(e):
+                        self.logger.error(f"Order: {order_sig} could not fill, retrying")
                     elif "0x1793" in str(e):
                         self.logger.error("Oracle invalid, retrying")
                     elif "0x1772" in str(e):
