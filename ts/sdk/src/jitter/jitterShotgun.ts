@@ -39,17 +39,19 @@ export class JitterShotgun extends BaseJitter {
 	): () => Promise<void> {
 		return async () => {
 			let i = 0;
-			while (i < 10) {
+
+			const takerStats = await this.userStatsMap.mustGet(
+				taker.authority.toString()
+			);
+			const referrerInfo = takerStats.getReferrerInfo();
+
+			// assumes each preflight simulation takes ~1 slot
+			while (i < order.auctionDuration) {
 				const params = this.perpParams.get(order.marketIndex);
 				if (!params) {
 					this.deleteOnGoingAuction(orderSignature);
 					return;
 				}
-
-				const takerStats = await this.userStatsMap.mustGet(
-					taker.authority.toString()
-				);
-				const referrerInfo = takerStats.getReferrerInfo();
 
 				const txParams = {
 					computeUnits: this.computeUnits,
@@ -76,7 +78,7 @@ export class JitterShotgun extends BaseJitter {
 						txParams
 					);
 
-					console.log(`Filled ${orderSignature} txSig ${txSig}`);
+					console.log(`Successfully sent tx for ${orderSignature} txSig ${txSig}`);
 					await sleep(10000);
 					this.deleteOnGoingAuction(orderSignature);
 					return;
@@ -94,7 +96,6 @@ export class JitterShotgun extends BaseJitter {
 						return;
 					}
 				}
-				await sleep(200);
 				i++;
 			}
 
