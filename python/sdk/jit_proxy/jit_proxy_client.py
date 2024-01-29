@@ -98,6 +98,22 @@ class JitProxyClient:
             else [],
         )
 
+        if params.referrer_info is not None:
+            remaining_accounts.append(
+                AccountMeta(
+                    pubkey=params.referrer_info.referrer,
+                    is_writable=True,
+                    is_signer=False,
+                )
+            )
+            remaining_accounts.append(
+                AccountMeta(
+                    pubkey=params.referrer_info.referrer_stats,
+                    is_writable=True,
+                    is_signer=False,
+                )
+            )
+
         if is_variant(order.market_type, "Spot"):
             remaining_accounts.append(
                 AccountMeta(

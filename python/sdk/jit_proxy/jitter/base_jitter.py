@@ -79,13 +79,9 @@ class BaseJitter(ABC):
 
         for order in taker.orders:
             if not is_variant(order.status, "Open"):
-                self.logger.info("Order is closed.")
-                self.logger.info("----------------------------")
                 continue
 
             if not has_auction_price(order, slot):
-                self.logger.info("Order does not have auction price.")
-                self.logger.info("----------------------------")
                 continue
 
             if self.user_filter is not None:
