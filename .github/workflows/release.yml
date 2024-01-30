@@ -9,24 +9,22 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2.5.0
 
-    - name: Change to SDK directory
-      run: cd python
-      
     - name: Set up Python
       uses: actions/setup-python@v4.3.0
       with:
-        python-version: '3.10.10' 
-    #----------------------------------------------
-    #  -----  install & configure poetry  -----
-    #----------------------------------------------
-    - name: Install and configure Poetry
-      uses: snok/install-poetry@v1.3.3
-      with:
-        version: 1.4.2
-        virtualenvs-create: true
-        virtualenvs-in-project: true
-        installer-parallel: true
+        python-version: '3.10.10'
 
-    # The following steps will now execute in the python/sdk directory
-    - run: poetry build
-    - run: poetry publish --username=__token__ --password=${{ secrets.PYPI_TOKEN }}
+    - name: Install and configure Poetry
+      run: |
+        cd python/sdk
+        curl -sSL https://install.python-poetry.org | python3 -
+      env:
+        POETRY_VERSION: 1.3.3
+
+    - name: Build
+      run: poetry build
+      working-directory: python
+
+    - name: Publish
+      run: poetry publish --username=__token__ --password=${{ secrets.PYPI_TOKEN }}
+      working-directory: python
