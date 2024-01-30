@@ -16,7 +16,7 @@ jobs:
 
     - name: Install and configure Poetry
       run: |
-        cd python/sdk
+        cd python
         curl -sSL https://install.python-poetry.org | python3 -
       env:
         POETRY_VERSION: 1.4.2
