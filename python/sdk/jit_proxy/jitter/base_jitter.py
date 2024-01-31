@@ -5,7 +5,7 @@ from typing import Callable, Dict, Optional
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from solders.pubkey import Pubkey
+from solders.pubkey import Pubkey # type: ignore
 
 from driftpy.types import is_variant, UserAccount, Order, UserStatsAccount, ReferrerInfo
 from driftpy.drift_client import DriftClient
@@ -72,7 +72,7 @@ class BaseJitter(ABC):
         taker_key_str = str(taker_key)
 
         taker_stats_key = get_user_stats_account_public_key(
-            self.drift_client.program_id, taker.authority
+            self.drift_client.program_id, taker.authority # type: ignore
         )
 
         self.logger.info(f"Taker: {taker.authority}")
@@ -110,7 +110,7 @@ class BaseJitter(ABC):
 
                 if (
                     order.base_asset_amount - order.base_asset_amount_filled
-                    <= perp_market_account.amm.min_order_size
+                    <= perp_market_account.amm.min_order_size # type: ignore
                 ):
                     self.logger.info("Order filled within min_order_size")
                     self.logger.info("----------------------------")
@@ -138,7 +138,7 @@ class BaseJitter(ABC):
 
                 if (
                     order.base_asset_amount - order.base_asset_amount_filled
-                    <= spot_market_account.min_order_size
+                    <= spot_market_account.min_order_size # type: ignore
                 ):
                     self.logger.info("Order filled within min_order_size")
                     self.logger.info("----------------------------")
@@ -177,7 +177,7 @@ class BaseJitter(ABC):
         order: Order,
         order_sig: str,
     ):
-        future = asyncio.Future()
+        future = asyncio.Future() # type: ignore
         future.set_result(None)
         return future
 
