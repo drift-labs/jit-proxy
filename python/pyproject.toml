@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "drift_jit_proxy"
-version = "0.1.0"
+version = "0.1.1"
 description = "python sdk for drift protocol v2 jit proxy program"
 authors = ["Frank <frank@lunoho.company>"]
 readme = "README.md"
