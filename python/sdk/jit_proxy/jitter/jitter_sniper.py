@@ -3,7 +3,7 @@ import asyncio
 from dataclasses import dataclass
 from typing import Any, Coroutine
 
-from solders.pubkey import Pubkey
+from solders.pubkey import Pubkey # type: ignore
 
 from driftpy.drift_client import DriftClient
 from driftpy.auction_subscriber.auction_subscriber import AuctionSubscriber
