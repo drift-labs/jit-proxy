@@ -132,24 +132,27 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
         let perp_market = perp_market_map.get_ref(&market_index)?;
         let reserve_price = perp_market.amm.reserve_price()?;
 
-        let mut maker_price = taker_price;
-        match maker_direction {
+        let maker_price = match maker_direction {
             PositionDirection::Long => {
                 let amm_bid_price = perp_market.amm.bid_price(reserve_price)?;
 
                 // if amm price is better than maker, use amm price to ensure fill
-                if taker_price <= amm_bid_price && amm_bid_price < maker_worst_price {
-                    maker_price = amm_bid_price;
+                if taker_price <= amm_bid_price {
+                    amm_bid_price.min(maker_worst_price)
+                } else {
+                    taker_price
                 }
             }
             PositionDirection::Short => {
                 let amm_ask_price = perp_market.amm.ask_price(reserve_price)?;
 
-                if taker_price >= amm_ask_price && amm_ask_price > maker_worst_price {
-                    maker_price = amm_ask_price;
+                if taker_price >= amm_ask_price {
+                    amm_ask_price.max(maker_worst_price)
+                } else {
+                    taker_price
                 }
             }
-        }
+        };
 
         maker_price
     } else {
