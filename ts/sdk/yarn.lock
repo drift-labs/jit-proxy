@@ -67,10 +67,10 @@
     bn.js "^5.1.2"
     buffer-layout "^1.2.0"
 
-"@drift-labs/sdk@2.61.0-beta.0":
-  version "2.61.0-beta.0"
-  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.61.0-beta.0.tgz#9af4ee5921a55a73196813a0e5a6e3c2d6fc55b7"
-  integrity sha512-+U7DI6RsGTZWFBU/Dxg3JNHqz9T7ILhxJ6OsE0btjVA18BEYEUvLdfeotbDfzfWRh8+TUFp3s+SNvlaYNxnp7Q==
+"@drift-labs/sdk@2.61.0-beta.1":
+  version "2.61.0-beta.1"
+  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.61.0-beta.1.tgz#a55a9e010d4ac08f6935bc0e9a8c23ff86c9f64c"
+  integrity sha512-FAbGcuXSbBzlwvUbfoK7aLDhFiZP0z/EJLqBysUYT6j+H5BJiF29rNAH1EPndViCIWVbs8COAARO6k/+/EryGw==
   dependencies:
     "@coral-xyz/anchor" "0.28.1-beta.2"
     "@ellipsis-labs/phoenix-sdk" "^1.4.2"
