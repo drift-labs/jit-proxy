@@ -17,3 +17,6 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+rust/target/
+rust/Cargo.lock
+rust/.env

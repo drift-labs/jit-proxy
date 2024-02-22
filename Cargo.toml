@@ -2,6 +2,7 @@
 members = [
     "programs/*"
 ]
+exclude = ["rust"]
 
 [profile.release]
 overflow-checks = true
