@@ -12,22 +12,22 @@ declare_id!("J1TnP8zvVxbtF5KFp5xRmWuvG9McnhzmBd9XGfCyuxFP");
 pub mod jit_proxy {
     use super::*;
 
-    pub fn jit<'info>(
-        ctx: Context<'_, '_, '_, 'info, Jit<'info>>,
+    pub fn jit<'c: 'info, 'info>(
+        ctx: Context<'_, '_, 'c, 'info, Jit<'info>>,
         params: JitParams,
     ) -> Result<()> {
         instructions::jit(ctx, params)
     }
 
-    pub fn check_order_constraints<'info>(
-        ctx: Context<'_, '_, '_, 'info, CheckOrderConstraints<'info>>,
+    pub fn check_order_constraints<'c: 'info, 'info>(
+        ctx: Context<'_, '_, 'c, 'info, CheckOrderConstraints<'info>>,
         constraints: Vec<OrderConstraint>,
     ) -> Result<()> {
         instructions::check_order_constraints(ctx, constraints)
     }
 
-    pub fn arb_perp<'info>(
-        ctx: Context<'_, '_, '_, 'info, ArbPerp<'info>>,
+    pub fn arb_perp<'c: 'info, 'info>(
+        ctx: Context<'_, '_, 'c, 'info, ArbPerp<'info>>,
         market_index: u16,
     ) -> Result<()> {
         instructions::arb_perp(ctx, market_index)

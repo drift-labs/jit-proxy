@@ -8,7 +8,7 @@ use drift::math::constants::{BASE_PRECISION, MARGIN_PRECISION_U128, QUOTE_PRECIS
 use drift::math::margin::MarginRequirementType;
 use drift::program::Drift;
 use drift::state::order_params::{OrderParams, PostOnlyParam};
-use drift::state::perp_market_map::MarketSet;
+use std::collections::BTreeSet;
 use std::ops::Deref;
 
 use drift::math::orders::find_bids_and_asks_from_users;
@@ -20,8 +20,8 @@ use drift::state::user_map::load_user_maps;
 
 use crate::error::ErrorCode;
 
-pub fn arb_perp<'info>(
-    ctx: Context<'_, '_, '_, 'info, ArbPerp<'info>>,
+pub fn arb_perp<'c: 'info, 'info>(
+    ctx: Context<'_, '_, 'c, 'info, ArbPerp<'info>>,
     market_index: u16,
 ) -> Result<()> {
     let clock = Clock::get()?;
@@ -41,8 +41,8 @@ pub fn arb_perp<'info>(
         spot_market_map,
     } = load_maps(
         remaining_accounts_iter,
-        &MarketSet::new(),
-        &MarketSet::new(),
+        &BTreeSet::new(),
+        &BTreeSet::new(),
         slot,
         None,
     )?;
