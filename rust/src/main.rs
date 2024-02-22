@@ -4,8 +4,6 @@ use solana_sdk::signature::Keypair;
 use thiserror::Error;
 use drift_sdk::{types::{Context, SdkError}, DriftClient, RpcAccountProvider};
 use anchor_client::Cluster;
-use dotenv::dotenv;
-use std::env;
 
 pub mod jit_proxy_client;
 pub use jit_proxy_client::JitProxyClient;
@@ -36,19 +34,15 @@ impl From<SdkError> for JitError {
     }
 }
 
+const MAINNET_ENDPOINT: &str = "https://mainnet.helius-rpc.com?api-key=";
 
 #[tokio::main]
 async fn main() {
     env_logger::init();
-    dotenv().ok();
-
-    let api_key = env::var("RPC").expect("RPC env not found");
-
-    let rpc_url = format!("https://mainnet.helius-rpc.com?api-key={}", api_key);
 
     let drift_client = DriftClient::new(
         Context::MainNet,
-        RpcAccountProvider::new(&rpc_url),
+        RpcAccountProvider::new(MAINNET_ENDPOINT),
         Keypair::new().into(),
     )
     .await
@@ -69,7 +63,7 @@ async fn main() {
     
     let jitter = jitter::Jitter::new(jit_proxy_client, shotgun);
 
-    let cluster = Cluster::from_str(&rpc_url).unwrap();
+    let cluster = Cluster::from_str(MAINNET_ENDPOINT).unwrap();
     let url = cluster.ws_url().to_string();
 
     jitter.update_perp_params(0, jit_params);
