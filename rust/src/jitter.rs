@@ -225,8 +225,6 @@ impl<T: AccountProvider> Jitter<T> {
                                         param.clone()
                                     ).await;
                                 };
-
-                                // self.ongoing_auctions.remove(&order_signature);
                             });
 
                             self.ongoing_auctions.insert(order_sig, ongoing_auction);
@@ -236,36 +234,45 @@ impl<T: AccountProvider> Jitter<T> {
                         }
                     }
                     MarketType::Spot => {
-                        // if let Some(_) = self.spot_params.get(&order.market_index) {
-                        //     log::info!("Spot Auction");
+                        if let Some(_) = self.spot_params.get(&order.market_index) {
+                            log::info!("Spot Auction");
 
-                        //     let spot_market = self.jit_proxy_client.drift_client.get_spot_market_info(order.market_index).await?;
+                            let spot_market = self.drift_client.get_spot_market_info(order.market_index).await?;
 
-                        //     if order.base_asset_amount - order.base_asset_amount_filled <= spot_market.min_order_size {
-                        //         log::warn!("Order filled within min order size");
-                        //         log::warn!("Remaining: {}", order.base_asset_amount - order.base_asset_amount_filled);
-                        //         log::warn!("Minimum order size: {}", spot_market.min_order_size);
-                        //         return Ok(())
-                        //     }
+                            if order.base_asset_amount - order.base_asset_amount_filled <= spot_market.min_order_size {
+                                log::warn!("Order filled within min order size");
+                                log::warn!("Remaining: {}", order.base_asset_amount - order.base_asset_amount_filled);
+                                log::warn!("Minimum order size: {}", spot_market.min_order_size);
+                                return Ok(())
+                            }
 
-                        //     let jitter = self.jitter.clone();
-                        //     let taker = user_pubkey.clone();
-                        //     let order_signature = order_sig.clone();
-                        //     let ongoing_auction = tokio::spawn(async move {
-                        //         let _ = jitter.try_fill(
-                        //             user.clone(), 
-                        //             Pubkey::from_str(&taker).unwrap(), 
-                        //             user_stats_key.clone(), 
-                        //             order.clone(), 
-                        //             order_signature,
-                        //         ).await;
-                        //     });
+                            let jitter = self.jitter.clone();
+                            let taker = user_pubkey.clone();
+                            let order_signature = order_sig.clone();
 
-                        //     self.ongoing_auctions.insert(order_sig, ongoing_auction);
-                        // } else {
-                        //     log::warn!("Jitter not listening to {}", order.market_index);
-                        //     return Ok(())
-                        // }
+                            let taker_stats: UserStats = self.drift_client.get_user_stats(&user_stats_key).await?;
+                            let referrer_info = ReferrerInfo::get_referrer_info(taker_stats);
+
+                            let spot_params = self.spot_params.clone();
+                            let ongoing_auction = tokio::spawn(async move {
+                                if let Some(param) = spot_params.get(&order.market_index) {
+                                    let _ = jitter.try_fill(
+                                        user.clone(), 
+                                        Pubkey::from_str(&taker).unwrap(), 
+                                        user_stats_key.clone(), 
+                                        order.clone(), 
+                                        order_signature.clone(),
+                                        referrer_info,
+                                        param.clone()
+                                    ).await;
+                                };
+                            });
+
+                            self.ongoing_auctions.insert(order_sig, ongoing_auction);
+                        } else {
+                            log::warn!("Jitter not listening to {}", order.market_index);
+                            return Ok(())
+                        }
                     }
                 }
             }
