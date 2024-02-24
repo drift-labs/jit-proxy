@@ -143,9 +143,18 @@ impl<T: AccountProvider> JitProxyClient<T> {
             
             let tx = VersionedMessage::V0(message);
             
-            let sig = self.drift_client.sign_and_send(tx).await?;
+            let sig = self.drift_client.sign_and_send(tx).await;
+
+            match sig {
+                Ok(sig) => {
+                    return Ok(sig)
+                }
+                Err(e) => {
+                    log::error!("Jit: {}", e);
+                    return Ok(Signature::default())
+                }
+            }
             
-            Ok(sig)
 
         } else {
             log::warn!("Order: {} not found", params.taker_order_id);
