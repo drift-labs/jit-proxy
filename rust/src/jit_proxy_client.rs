@@ -9,7 +9,7 @@ use solana_sdk::instruction::{AccountMeta, Instruction};
 use solana_sdk::message::v0;
 use solana_sdk::signature::Signature;
 
-use crate::JitResult;
+use crate::{JitError, JitResult};
 
 pub struct JitIxParams {
     taker_key: Pubkey,
@@ -150,8 +150,8 @@ impl<T: AccountProvider> JitProxyClient<T> {
                     return Ok(sig)
                 }
                 Err(e) => {
-                    log::error!("Jit: {}", e);
-                    return Ok(Signature::default())
+                    log::error!("Error: {}", e);
+                    return Err(JitError::Sdk(e.to_string()))
                 }
             }
             
