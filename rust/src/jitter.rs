@@ -4,7 +4,10 @@ use async_trait::async_trait;
 use dashmap::DashMap;
 use drift::state::user::{OrderStatus, User, UserStats};
 use drift_sdk::{
-    auction_subscriber::{AuctionSubscriber, AuctionSubscriberConfig}, constants::PROGRAM_ID as drift_program, event_emitter::Event, slot_subscriber::SlotSubscriber, types::{
+    auction_subscriber::{AuctionSubscriber, AuctionSubscriberConfig}, 
+    constants::PROGRAM_ID as drift_program, 
+    event_emitter::Event,
+    types::{
         CommitmentConfig, 
         MarketType, 
         Order, 
@@ -16,7 +19,7 @@ use solana_sdk::signature::Signature;
 use tokio::sync::mpsc::{self, Receiver, Sender};
 use tokio::task::JoinHandle;
 
-use crate::jit_proxy_client::{self, JitIxParams, JitProxyClient};
+use crate::jit_proxy_client::{JitIxParams, JitProxyClient};
 use crate::JitResult;
 
 
@@ -35,7 +38,7 @@ fn log_details(order: &Order) {
 }
 
 #[inline(always)]
-fn check_err(err: String, order_sig: String) -> Option<u8> {
+fn check_err(err: String, order_sig: String) -> Option<()> {
     if err.contains("0x1770") || err.contains("0x1771") {
         log::error!("Order: {} does not cross params yet, retrying", order_sig);
         None
@@ -47,10 +50,10 @@ fn check_err(err: String, order_sig: String) -> Option<u8> {
         None
     } else if err.contains("0x1772") {
         log::error!("Order: {} already filled", order_sig);
-        Some(1)
+        Some(())
     } else {
         log::error!("Error: {}", err);
-        Some(2)
+        Some(())
     }       
 }
 
@@ -61,7 +64,6 @@ pub struct JitParams {
     min_position: i64,
     max_position: i64,
     price_type: PriceType,
-    sub_account_id: Option<u16>,
 }
 
 impl JitParams {
@@ -71,7 +73,6 @@ impl JitParams {
         min_position: i64,
         max_position: i64,
         price_type: PriceType,
-        sub_account_id: Option<u16>,
     ) -> Self {
         Self {
             bid,
@@ -79,7 +80,6 @@ impl JitParams {
             min_position,
             max_position,
             price_type,
-            sub_account_id,
         }
     }
 }

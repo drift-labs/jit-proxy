@@ -69,7 +69,6 @@ async fn main() {
         -1_000_000,
         1_000_000,
         jit_proxy::state::PriceType::Oracle,
-        None,
     );
 
     let shotgun: Arc<dyn JitterStrategy + Send + Sync> = Arc::new(Shotgun { jit_proxy_client });
