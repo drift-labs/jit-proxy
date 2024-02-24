@@ -302,7 +302,9 @@ pub struct Shotgun<T: AccountProvider> {
 
 /// Implementing the Sniper is left as an exercise for the reader.
 /// The Sniper is a more patient and precise creature, waiting for the perfect moment to strike.
-/// It is also a more complex mechanism, requiring intricate logic to implement correctly.
+/// It is also a more complex mechanism, necessitating a careful hand to design properly.
+/// The Sniper is an advanced strategy, and is not for the faint of heart.
+/// Good luck!
 pub struct Sniper<T: AccountProvider> {
     pub jit_proxy_client: JitProxyClient<T>,
     pub slot_subscriber: SlotSubscriber
