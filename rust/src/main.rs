@@ -2,7 +2,7 @@ use std::{str::FromStr, sync::Arc};
 
 use solana_sdk::signature::Keypair;
 use thiserror::Error;
-use drift_sdk::{types::{Context, SdkError}, DriftClient, RpcAccountProvider};
+use drift_sdk::{types::{CommitmentConfig, Context, SdkError}, DriftClient, RpcAccountProvider};
 use anchor_client::Cluster;
 
 pub mod jit_proxy_client;
@@ -55,7 +55,7 @@ async fn main() {
 
     let drift_client = DriftClient::new(
         Context::MainNet,
-        RpcAccountProvider::new(&rpc_url),
+        RpcAccountProvider::with_commitment(&rpc_url, CommitmentConfig::finalized()),
         keypair.into(),
     )
     .await

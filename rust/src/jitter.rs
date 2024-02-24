@@ -4,10 +4,7 @@ use async_trait::async_trait;
 use dashmap::DashMap;
 use drift::state::user::{OrderStatus, User, UserStats};
 use drift_sdk::{
-    auction_subscriber::{AuctionSubscriber, AuctionSubscriberConfig}, 
-    constants::PROGRAM_ID as drift_program, 
-    event_emitter::Event,
-    types::{
+    auction_subscriber::{AuctionSubscriber, AuctionSubscriberConfig}, constants::PROGRAM_ID as drift_program, event_emitter::Event, slot_subscriber::SlotSubscriber, types::{
         CommitmentConfig, 
         MarketType, 
         Order, 
@@ -301,6 +298,14 @@ impl<T: AccountProvider> Jitter<T> {
 
 pub struct Shotgun<T: AccountProvider> {
     pub jit_proxy_client: JitProxyClient<T>
+}
+
+/// Implementing the Sniper is left as an exercise for the reader.
+/// The Sniper is a more patient and precise creature, waiting for the perfect moment to strike.
+/// It is also a more complex mechanism, requiring intricate logic to implement correctly.
+pub struct Sniper<T: AccountProvider> {
+    pub jit_proxy_client: JitProxyClient<T>,
+    pub slot_subscriber: SlotSubscriber
 }
 
 #[async_trait]
