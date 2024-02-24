@@ -78,7 +78,17 @@ async fn main() {
     let cluster = Cluster::from_str(&rpc_url).unwrap();
     let url = cluster.ws_url().to_string();
 
-    jitter.update_perp_params(0, jit_params);
+    jitter.update_perp_params(0, jit_params.clone());
+    jitter.update_perp_params(1, jit_params.clone());
+    jitter.update_perp_params(2, jit_params.clone());
+    jitter.update_perp_params(3, jit_params.clone());
+    jitter.update_perp_params(4, jit_params.clone());
+    jitter.update_perp_params(5, jit_params.clone());
+    jitter.update_perp_params(6, jit_params.clone());
+    jitter.update_perp_params(7, jit_params.clone());
+    jitter.update_perp_params(8, jit_params.clone());
+    jitter.update_perp_params(9, jit_params.clone());
+    jitter.update_perp_params(10, jit_params.clone());
 
     let _ = jitter.subscribe(url).await.unwrap();
 }

@@ -204,17 +204,21 @@ impl<T: AccountProvider> Jitter<T> {
                                 log::warn!("Minimum order size: {}", perp_market.amm.min_order_size);
                                 return Ok(())
                             }
+                            log::info!("Here");
 
                             let jitter = self.jitter.clone();
                             let taker = user_pubkey.clone();
                             let order_signature = order_sig.clone();
+                            log::info!("Here2");
 
-                            let taker_stats: UserStats = self.drift_client.get_user_stats(&user_stats_key).await?;
+                            let taker_stats: UserStats = self.drift_client.get_user_stats(&user.authority).await.unwrap();
                             let referrer_info = ReferrerInfo::get_referrer_info(taker_stats);
 
+                            log::info!("Here3");
                             let perp_params = self.perp_params.clone();
                             let ongoing_auction = tokio::spawn(async move {
                                 if let Some(param) = perp_params.get(&order.market_index) {
+                                    log::info!("Spawning!");
                                     let _ = jitter.try_fill(
                                         user.clone(), 
                                         Pubkey::from_str(&taker).unwrap(), 
@@ -250,7 +254,7 @@ impl<T: AccountProvider> Jitter<T> {
                             let taker = user_pubkey.clone();
                             let order_signature = order_sig.clone();
 
-                            let taker_stats: UserStats = self.drift_client.get_user_stats(&user_stats_key).await?;
+                            let taker_stats: UserStats = self.drift_client.get_user_stats(&user.authority).await?;
                             let referrer_info = ReferrerInfo::get_referrer_info(taker_stats);
 
                             let spot_params = self.spot_params.clone();
