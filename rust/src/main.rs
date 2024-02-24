@@ -41,18 +41,27 @@ async fn main() {
     env_logger::init();
     dotenv().ok();
 
-    let api_key = env::var("RPC").expect("RPC must be set");
+    let api_key = env::var("RPC_KEY").expect("RPC_KEY must be set");
+    let private_key = env::var("PRIVATE_KEY").expect("PRIVATE_KEY must be set");
+
+    let pk_vec: Vec<u8> = private_key.trim_matches(|c| c == '[' || c == ']')
+        .split(',')
+        .map(|s| s.trim().parse::<u8>().expect("Failed to parse u8"))
+        .collect();
+
+    let pk_bytes: &[u8] = &pk_vec;
     let rpc_url = format!("https://mainnet.helius-rpc.com?api-key={}", api_key);
+    let keypair = Keypair::from_bytes(pk_bytes).unwrap();
 
     let drift_client = DriftClient::new(
         Context::MainNet,
         RpcAccountProvider::new(&rpc_url),
-        Keypair::new().into(),
+        keypair.into(),
     )
     .await
     .unwrap();
 
-    let jit_proxy_client = JitProxyClient::new(drift_client).await;
+    let jit_proxy_client = JitProxyClient::new(drift_client.clone()).await;
 
     let jit_params = JitParams::new(
         0,
@@ -63,9 +72,9 @@ async fn main() {
         None,
     );
 
-    let shotgun: Arc<dyn JitterStrategy + Send + Sync> = Arc::new(Shotgun);
+    let shotgun: Arc<dyn JitterStrategy + Send + Sync> = Arc::new(Shotgun { jit_proxy_client });
     
-    let jitter = jitter::Jitter::new(jit_proxy_client, shotgun);
+    let jitter = jitter::Jitter::new(drift_client.clone(), shotgun);
 
     let cluster = Cluster::from_str(&rpc_url).unwrap();
     let url = cluster.ws_url().to_string();

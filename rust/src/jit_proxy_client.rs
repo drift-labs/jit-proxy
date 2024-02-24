@@ -1,7 +1,7 @@
 use anchor_client::anchor_lang::InstructionData;
 use drift::math::constants::QUOTE_SPOT_MARKET_INDEX;
 use drift::state::user::{MarketType, User};
-use drift_sdk::types::{MarketId, VersionedMessage};
+use drift_sdk::types::{MarketId, ReferrerInfo, VersionedMessage};
 use jit_proxy::state::PostOnlyParam;
 use jit_proxy::state::PriceType;
 use drift_sdk::{build_accounts, AccountProvider, DriftClient, Pubkey, constants::{state_account, PROGRAM_ID}};
@@ -10,28 +10,6 @@ use solana_sdk::message::v0;
 use solana_sdk::signature::Signature;
 
 use crate::JitResult;
-
-pub struct ReferrerInfo {
-    referrer: Pubkey,
-    referrer_stats: Pubkey
-}
-
-impl ReferrerInfo {
-    pub fn new(referrer: Pubkey, referrer_stats: Pubkey) -> Self {
-        Self {
-            referrer,
-            referrer_stats
-        }
-    }
-
-    pub fn referrer(&self) -> Pubkey {
-        self.referrer
-    }
-
-    pub fn referrer_stats(&self) -> Pubkey {
-        self.referrer_stats
-    }
-}
 
 pub struct JitIxParams {
     taker_key: Pubkey,
@@ -44,7 +22,6 @@ pub struct JitIxParams {
     ask: i64,
     price_type: Option<PriceType>,
     referrer_info: Option<ReferrerInfo>,
-    sub_account_id: Option<u8>,
     post_only: Option<PostOnlyParam>,
 }
 
@@ -60,7 +37,6 @@ impl JitIxParams {
         ask: i64,
         price_type: Option<PriceType>,
         referrer_info: Option<ReferrerInfo>,
-        sub_account_id: Option<u8>,
         post_only: Option<PostOnlyParam>,
     ) -> Self {
         Self {
@@ -74,12 +50,12 @@ impl JitIxParams {
             ask,
             price_type,
             referrer_info,
-            sub_account_id,
             post_only,
         }
     }
 }
 
+#[derive(Clone)]
 pub struct JitProxyClient<T: AccountProvider> {
     pub drift_client: DriftClient<T>,
 }
@@ -173,7 +149,7 @@ impl<T: AccountProvider> JitProxyClient<T> {
 
         } else {
             log::warn!("Order: {} not found", params.taker_order_id);
-            Ok(Signature::default()) // this is checked against in the jitters, a default signature isn't flagged as a successful fill, i just don't want to return errors
+            Ok(Signature::default()) // this is checked against in the jitters, a default signature isn't a successful fill, i just don't want to return errors
         }
     }
 }  
