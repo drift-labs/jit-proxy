@@ -1,47 +1,25 @@
-use std::{str::FromStr, sync::Arc};
+use std::env;
+use std::str::FromStr;
 
-use solana_sdk::signature::Keypair;
-use thiserror::Error;
-use drift_sdk::{types::{CommitmentConfig, Context, SdkError}, DriftClient, RpcAccountProvider};
 use anchor_client::Cluster;
+use dotenv::dotenv;
+use solana_sdk::signature::Keypair;
+
+use drift_sdk::types::{CommitmentConfig, Context, RpcSendTransactionConfig};
+use drift_sdk::{DriftClient, RpcAccountProvider};
+use jitter::{Jitter, JitParams};
+use types::ComputeBudgetParams;
 
 pub mod jit_proxy_client;
-pub use jit_proxy_client::JitProxyClient;
-
-use crate::jitter::{JitterStrategy, Shotgun, JitParams};
 pub mod jitter;
-use dotenv::dotenv;
-use std::env;
-
-pub type JitResult<T> = Result<T, JitError>;
-
-#[derive(Debug, Error)]
-pub enum JitError {
-    #[error("{0}")]
-    Drift(String),
-    #[error("{0}")]
-    Sdk(String),
-}
-
-
-impl From<drift::error::ErrorCode> for JitError {
-    fn from(error: drift::error::ErrorCode) -> Self {
-        JitError::Drift(error.to_string())
-    }
-}
-
-impl From<SdkError> for JitError {
-    fn from(error: SdkError) -> Self {
-        JitError::Sdk(error.to_string())
-    }
-}
+pub mod types;
 
 #[tokio::main]
 async fn main() {
     env_logger::init();
     dotenv().ok();
 
-    let api_key = env::var("RPC_KEY").expect("RPC_KEY must be set");
+    let rpc_url = env::var("RPC_URL").expect("RPC_KEY must be set");
     let private_key = env::var("PRIVATE_KEY").expect("PRIVATE_KEY must be set");
 
     let pk_vec: Vec<u8> = private_key.trim_matches(|c| c == '[' || c == ']')
@@ -50,7 +28,6 @@ async fn main() {
         .collect();
 
     let pk_bytes: &[u8] = &pk_vec;
-    let rpc_url = format!("https://mainnet.helius-rpc.com?api-key={}", api_key);
     let keypair = Keypair::from_bytes(pk_bytes).unwrap();
 
     let drift_client = DriftClient::new(
@@ -59,9 +36,16 @@ async fn main() {
         keypair.into(),
     )
     .await
-    .unwrap();
+    .unwrap(); 
 
-    let jit_proxy_client = JitProxyClient::new(drift_client.clone()).await;
+    let config = RpcSendTransactionConfig::default();
+
+    let cu_params = ComputeBudgetParams::new(100_000, 1_400_000);
+
+    let jitter = Jitter::new_with_shotgun(drift_client, Some(config), Some(cu_params));
+
+    let cluster = Cluster::from_str(&rpc_url).unwrap();
+    let url = cluster.ws_url().to_string();
 
     let jit_params = JitParams::new(
         0,
@@ -70,13 +54,6 @@ async fn main() {
         1_000_000,
         jit_proxy::state::PriceType::Oracle,
     );
-
-    let shotgun: Arc<dyn JitterStrategy + Send + Sync> = Arc::new(Shotgun { jit_proxy_client });
-    
-    let jitter = jitter::Jitter::new(drift_client.clone(), shotgun);
-
-    let cluster = Cluster::from_str(&rpc_url).unwrap();
-    let url = cluster.ws_url().to_string();
 
     jitter.update_perp_params(0, jit_params.clone());
     jitter.update_perp_params(1, jit_params.clone());
