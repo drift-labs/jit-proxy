@@ -1,0 +1,22 @@
+[package]
+name = "rust"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anchor-client = "0.27.0"
+jit-proxy = { git = "https://github.com/drift-labs/jit-proxy", version = "0.10.2" }
+solana-sdk = "1.14.16"
+drift-sdk = { git = "https://github.com/circuit-research/protocol-v2", branch = "cargo-add-sdk" }
+tokio = { version = "1.35.1", features = ["full"] }
+drift = { git = "https://github.com/drift-labs/protocol-v2.git", tag = "v2.53.0", features = ["mainnet-beta"]}
+thiserror = "1.0.38"
+log = "0.4.20"
+async-trait = "0.1.75"
+env_logger = "0.10.1"
+futures-util = "0.3.30"
+dashmap = "5.5.3"
+futures = "0.3.30"
+dotenv = "0.15.0"
