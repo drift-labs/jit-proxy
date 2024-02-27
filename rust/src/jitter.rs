@@ -38,16 +38,29 @@ type ExcludeAuctionFn = dyn Fn(&User, &String, Order) -> bool + Send + Sync;
 
 #[inline(always)]
 fn log_details(order: &Order) {
-    log::info!("Market Type: {:?}", order.market_type);  
-    log::info!("Market index: {}", order.market_index);
-    log::info!("Order price: {}", order.price);
-    log::info!("Order direction: {:?}", order.direction);
-    log::info!("Auction start price: {}", order.auction_start_price);
-    log::info!("Auction end price: {}", order.auction_end_price); 
-    log::info!("Auction duration: {} slots", order.auction_duration);
-    log::info!("Order base asset amount: {}", order.base_asset_amount);
-    log::info!("Order base asset amount filled: {}", order.base_asset_amount_filled);
+    log::info!(
+        "Order Details:\n\
+        Market Type: {:?}\n\
+        Market index: {}\n\
+        Order price: {}\n\
+        Order direction: {:?}\n\
+        Auction start price: {}\n\
+        Auction end price: {}\n\
+        Auction duration: {} slots\n\
+        Order base asset amount: {}\n\
+        Order base asset amount filled: {}",
+        order.market_type,
+        order.market_index,
+        order.price,
+        order.direction,
+        order.auction_start_price,
+        order.auction_end_price,
+        order.auction_duration,
+        order.base_asset_amount,
+        order.base_asset_amount_filled
+    );
 }
+
 
 #[inline(always)]
 fn check_err(err: String, order_sig: String) -> Option<()> {

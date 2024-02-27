@@ -166,16 +166,10 @@ impl<T: AccountProvider> JitProxyClient<T> {
 
             let sig = self.drift_client.sign_and_send_with_config(tx, self.config.unwrap_or(RpcSendTransactionConfig::default())).await;
 
-            match sig {
-                Ok(sig) => {
-                    return Ok(sig)
-                }
-                Err(e) => {
-                    log::error!("Error: {}", e);
-                    return Err(JitError::Sdk(e.to_string()))
-                }
-            }
-            
+            sig.map_err(|e| {
+                log::error!("Error: {}", e);
+                JitError::Sdk(e.to_string())
+             })
 
         } else {
             log::warn!("Order: {} not found", params.taker_order_id);
