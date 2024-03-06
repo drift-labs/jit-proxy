@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "drift_jit_proxy"
-version = "0.1.2"
+version = "0.1.3"
 description = "python sdk for drift protocol v2 jit proxy program"
 authors = ["Frank <frank@lunoho.company>"]
 readme = "README.md"
@@ -13,7 +13,7 @@ python = "^3.10"
 python-dotenv = "^1.0.0"
 solana = "^0.30.1"
 anchorpy = "^0.17.1"
-driftpy = "^0.7.34"
+driftpy = "0.7.35"
 
 [build-system]
 requires = ["poetry-core"]
