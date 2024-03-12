@@ -636,8 +636,8 @@ dependencies = [
 
 [[package]]
 name = "drift"
-version = "2.66.0"
-source = "git+https://github.com/drift-labs/protocol-v2.git?tag=v2.66.0#83ce0fb2a11550d6fc52c5029420454a310dee1d"
+version = "2.71.0"
+source = "git+https://github.com/drift-labs/protocol-v2.git?tag=v2.71.0#7df812dc26f590fd96f8623de0a93faf471d2193"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
@@ -656,6 +656,7 @@ dependencies = [
  "solana-program",
  "solana-security-txt",
  "static_assertions",
+ "switchboard",
  "thiserror",
  "uint",
 ]
@@ -1958,6 +1959,14 @@ name = "subtle"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
+
+[[package]]
+name = "switchboard"
+version = "0.1.0"
+source = "git+https://github.com/drift-labs/protocol-v2.git?tag=v2.71.0#7df812dc26f590fd96f8623de0a93faf471d2193"
+dependencies = [
+ "anchor-lang",
+]
 
 [[package]]
 name = "syn"
