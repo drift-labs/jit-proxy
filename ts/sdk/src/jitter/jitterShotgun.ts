@@ -78,7 +78,9 @@ export class JitterShotgun extends BaseJitter {
 						txParams
 					);
 
-					console.log(`Successfully sent tx for ${orderSignature} txSig ${txSig}`);
+					console.log(
+						`Successfully sent tx for ${orderSignature} txSig ${txSig}`
+					);
 					await sleep(10000);
 					this.deleteOnGoingAuction(orderSignature);
 					return;
