@@ -7,7 +7,7 @@ use solana_sdk::signature::Keypair;
 
 use drift_sdk::types::{CommitmentConfig, Context, RpcSendTransactionConfig};
 use drift_sdk::{DriftClient, RpcAccountProvider};
-use jitter::{Jitter, JitParams};
+use jitter::{JitParams, Jitter};
 use types::ComputeBudgetParams;
 
 pub mod jit_proxy_client;
@@ -22,7 +22,8 @@ async fn main() {
     let rpc_url = env::var("RPC_URL").expect("RPC_KEY must be set");
     let private_key = env::var("PRIVATE_KEY").expect("PRIVATE_KEY must be set");
 
-    let pk_vec: Vec<u8> = private_key.trim_matches(|c| c == '[' || c == ']')
+    let pk_vec: Vec<u8> = private_key
+        .trim_matches(|c| c == '[' || c == ']')
         .split(',')
         .map(|s| s.trim().parse::<u8>().expect("Failed to parse u8"))
         .collect();
@@ -36,7 +37,7 @@ async fn main() {
         keypair.into(),
     )
     .await
-    .unwrap(); 
+    .unwrap();
 
     let config = RpcSendTransactionConfig::default();
 
