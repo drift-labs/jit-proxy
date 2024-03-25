@@ -1089,8 +1089,8 @@ dependencies = [
 
 [[package]]
 name = "drift"
-version = "2.66.0"
-source = "git+https://github.com/drift-labs/protocol-v2.git?tag=v2.66.0#83ce0fb2a11550d6fc52c5029420454a310dee1d"
+version = "2.71.0"
+source = "git+https://github.com/drift-labs/protocol-v2.git?tag=v2.71.0#7df812dc26f590fd96f8623de0a93faf471d2193"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
@@ -1109,6 +1109,7 @@ dependencies = [
  "solana-program",
  "solana-security-txt",
  "static_assertions",
+ "switchboard",
  "thiserror",
  "uint",
 ]
@@ -1125,16 +1126,18 @@ dependencies = [
 [[package]]
 name = "drift-sdk"
 version = "0.1.0"
-source = "git+https://github.com/drift-labs/drift-rs#5aa2a79ee8ea1a9537f774d5d5cc368bd597df50"
+source = "git+https://github.com/soundsonacid/drift-rs#9175d389299f1ee2d358026d4cbf64dd6d281844"
 dependencies = [
  "anchor-lang",
  "base64 0.13.1",
  "bytemuck",
- "drift 2.66.0",
+ "dashmap",
+ "drift 2.71.0",
  "env_logger 0.10.2",
  "fnv",
  "futures-util",
  "log",
+ "rayon",
  "regex",
  "reqwest",
  "serde",
@@ -2755,9 +2758,9 @@ dependencies = [
 
 [[package]]
 name = "rayon"
-version = "1.8.1"
+version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa7237101a77a10773db45d62004a272517633fbcc3df19d96455ede1122e051"
+checksum = "b418a60154510ca1a002a752ca9714984e21e4241e804d32555251faf8b78ffa"
 dependencies = [
  "either",
  "rayon-core",
@@ -2929,7 +2932,7 @@ dependencies = [
  "async-trait",
  "dashmap",
  "dotenv",
- "drift 2.66.0",
+ "drift 2.71.0",
  "drift-sdk",
  "env_logger 0.10.2",
  "futures",
@@ -4093,6 +4096,14 @@ name = "subtle"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
+
+[[package]]
+name = "switchboard"
+version = "0.1.0"
+source = "git+https://github.com/drift-labs/protocol-v2.git?tag=v2.71.0#7df812dc26f590fd96f8623de0a93faf471d2193"
+dependencies = [
+ "anchor-lang",
+]
 
 [[package]]
 name = "syn"

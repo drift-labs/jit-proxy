@@ -132,7 +132,7 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
         let perp_market = perp_market_map.get_ref(&market_index)?;
         let reserve_price = perp_market.amm.reserve_price()?;
 
-        let maker_price = match maker_direction {
+        match maker_direction {
             PositionDirection::Long => {
                 let amm_bid_price = perp_market.amm.bid_price(reserve_price)?;
 
@@ -152,9 +152,7 @@ pub fn jit<'info>(ctx: Context<'_, '_, '_, 'info, Jit<'info>>, params: JitParams
                     taker_price
                 }
             }
-        };
-
-        maker_price
+        }
     } else {
         taker_price
     };

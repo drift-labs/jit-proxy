@@ -4,35 +4,26 @@ use async_trait::async_trait;
 use dashmap::DashMap;
 use drift::state::user::{OrderStatus, User, UserStats};
 use drift_sdk::{
-    auction_subscriber::{AuctionSubscriber, AuctionSubscriberConfig}, 
-    constants::PROGRAM_ID as drift_program, 
-    event_emitter::Event, 
-    slot_subscriber::SlotSubscriber, 
+    auction_subscriber::{AuctionSubscriber, AuctionSubscriberConfig},
+    constants::PROGRAM_ID as drift_program,
+    event_emitter::Event,
+    slot_subscriber::SlotSubscriber,
     types::{
-        CommitmentConfig, 
-        MarketType, 
-        Order, 
-        PerpMarket, 
-        ReferrerInfo, 
-        RpcSendTransactionConfig
-    }, 
-    websocket_program_account_subscriber::ProgramAccountUpdate, 
-    AccountProvider, 
-    DriftClient, 
-    Pubkey, 
-    Wallet
+        CommitmentConfig, MarketType, Order, PerpMarket, ReferrerInfo, RpcSendTransactionConfig,
+    },
+    websocket_program_account_subscriber::ProgramAccountUpdate,
+    AccountProvider, DriftClient, Pubkey, Wallet,
 };
 use jit_proxy::state::PriceType;
 use solana_sdk::signature::Signature;
 use tokio::sync::mpsc::{self, Receiver, Sender};
 use tokio::task::JoinHandle;
 
-use crate::{
-    jit_proxy_client::{JitIxParams, JitProxyClient}, 
-    types::ComputeBudgetParams
-};
 use crate::types::JitResult;
-
+use crate::{
+    jit_proxy_client::{JitIxParams, JitProxyClient},
+    types::ComputeBudgetParams,
+};
 
 type ExcludeAuctionFn = dyn Fn(&User, &String, Order) -> bool + Send + Sync;
 
@@ -61,7 +52,6 @@ fn log_details(order: &Order) {
     );
 }
 
-
 #[inline(always)]
 fn check_err(err: String, order_sig: String) -> Option<()> {
     if err.contains("0x1770") || err.contains("0x1771") {
@@ -79,7 +69,7 @@ fn check_err(err: String, order_sig: String) -> Option<()> {
     } else {
         log::error!("Order: {}, Error: {}", order_sig, err);
         Some(())
-    }       
+    }
 }
 
 #[derive(Clone)]
@@ -120,15 +110,23 @@ pub struct Jitter<T: AccountProvider> {
 
 #[async_trait]
 pub trait JitterStrategy {
-    async fn try_fill(&self, taker: User, taker_key: Pubkey, taker_stats_key: Pubkey, order: Order, order_sig: String, referrer_info: Option<ReferrerInfo>, params: JitParams) -> JitResult<()>;
+    async fn try_fill(
+        &self,
+        taker: User,
+        taker_key: Pubkey,
+        taker_stats_key: Pubkey,
+        order: Order,
+        order_sig: String,
+        referrer_info: Option<ReferrerInfo>,
+        params: JitParams,
+    ) -> JitResult<()>;
 }
 
 impl<T: AccountProvider + Clone> Jitter<T> {
     pub fn new(
         drift_client: DriftClient<T>,
-        jitter: Arc<dyn JitterStrategy + Send + Sync>, 
+        jitter: Arc<dyn JitterStrategy + Send + Sync>,
     ) -> Arc<Self> {
-
         Arc::new(Jitter {
             drift_client,
             perp_params: DashMap::new(),
@@ -159,10 +157,13 @@ impl<T: AccountProvider + Clone> Jitter<T> {
     }
 
     // Subscribe to auction events and start listening for them
-    pub async fn subscribe(self: Arc<Self>, url: String) -> JitResult<()>{
-        let (auction_sender, mut auction_receiver): (Sender<Box<dyn Event>>, Receiver<Box<dyn Event>>) = mpsc::channel(100); 
+    pub async fn subscribe(self: Arc<Self>, url: String) -> JitResult<()> {
+        let (auction_sender, mut auction_receiver): (
+            Sender<Box<dyn Event>>,
+            Receiver<Box<dyn Event>>,
+        ) = mpsc::channel(100);
 
-        // Set up a receiver to bounce the auction events to the trampoline 
+        // Set up a receiver to bounce the auction events to the trampoline
         tokio::spawn(async move {
             while let Some(event) = auction_receiver.recv().await {
                 let _ = self.on_auction_sync(event);
@@ -181,16 +182,18 @@ impl<T: AccountProvider + Clone> Jitter<T> {
         let auction_sender: Sender<Box<dyn Event>> = auction_sender.clone();
 
         // Send auction events to the receiver to be processed
-        auction_subscriber.event_emitter.subscribe("auction",  move |event| {
-            let _ = auction_sender.try_send(event);
-        });
+        auction_subscriber
+            .event_emitter
+            .subscribe("auction", move |event| {
+                let _ = auction_sender.try_send(event);
+            });
 
-        futures::future::pending::<()>().await;  // Keep the event loop alive forever
+        futures::future::pending::<()>().await; // Keep the event loop alive forever
 
         Ok(())
     }
 
-    // Simple trampoline to the async function we need from the auction event 
+    // Simple trampoline to the async function we need from the auction event
     pub fn on_auction_sync(self: &Arc<Self>, event: Box<dyn Event>) -> JitResult<()> {
         let jitter = self.clone();
         tokio::spawn(async move {
@@ -209,7 +212,7 @@ impl<T: AccountProvider + Clone> Jitter<T> {
             let user = auction.data_and_slot.data.clone();
             let user_stats_key = Wallet::derive_stats_account(&user.authority, &drift_program);
 
-            for order in user.orders {  
+            for order in user.orders {
                 if order.status != OrderStatus::Open {
                     continue;
                 }
@@ -235,107 +238,158 @@ impl<T: AccountProvider + Clone> Jitter<T> {
                         log::info!("Perp Auction");
 
                         if let Some(param) = self.perp_params.get(&order.market_index) {
+                            let perp_market: PerpMarket = self
+                                .drift_client
+                                .get_perp_market_info(order.market_index)
+                                .await?;
 
-                            let perp_market: PerpMarket = self.drift_client.get_perp_market_info(order.market_index).await?;
-                            
-                            if order.base_asset_amount - order.base_asset_amount_filled < perp_market.amm.min_order_size {
+                            if order.base_asset_amount - order.base_asset_amount_filled
+                                < perp_market.amm.min_order_size
+                            {
                                 log::warn!("Order filled within min order size");
-                                log::warn!("Remaining: {}", order.base_asset_amount - order.base_asset_amount_filled);
-                                log::warn!("Minimum order size: {}", perp_market.amm.min_order_size);
-                                return Ok(())
+                                log::warn!(
+                                    "Remaining: {}",
+                                    order.base_asset_amount - order.base_asset_amount_filled
+                                );
+                                log::warn!(
+                                    "Minimum order size: {}",
+                                    perp_market.amm.min_order_size
+                                );
+                                return Ok(());
                             }
 
-                            if (order.base_asset_amount as i128) - (order.base_asset_amount_filled as i128) > param.max_position.into() {
+                            if (order.base_asset_amount as i128)
+                                - (order.base_asset_amount_filled as i128)
+                                > param.max_position.into()
+                            {
                                 log::warn!("Order filled within max position");
-                                log::warn!("Remaining: {}", order.base_asset_amount - order.base_asset_amount_filled);
+                                log::warn!(
+                                    "Remaining: {}",
+                                    order.base_asset_amount - order.base_asset_amount_filled
+                                );
                                 log::warn!("Max position: {}", param.max_position);
-                                return Ok(())
+                                return Ok(());
                             }
 
-                            if (order.base_asset_amount as i128) - (order.base_asset_amount_filled as i128) < param.min_position.into() {
+                            if (order.base_asset_amount as i128)
+                                - (order.base_asset_amount_filled as i128)
+                                < param.min_position.into()
+                            {
                                 log::warn!("Order filled within min position");
-                                log::warn!("Remaining: {}", order.base_asset_amount - order.base_asset_amount_filled);
+                                log::warn!(
+                                    "Remaining: {}",
+                                    order.base_asset_amount - order.base_asset_amount_filled
+                                );
                                 log::warn!("Min position: {}", param.min_position);
-                                return Ok(())
+                                return Ok(());
                             }
 
                             let jitter = self.jitter.clone();
                             let taker = user_pubkey.clone();
                             let order_signature = order_sig.clone();
 
-                            let taker_stats: UserStats = self.drift_client.get_user_stats(&user.authority).await.unwrap();
+                            let taker_stats: UserStats = self
+                                .drift_client
+                                .get_user_stats(&user.authority)
+                                .await
+                                .unwrap();
                             let referrer_info = ReferrerInfo::get_referrer_info(taker_stats);
 
                             let param = param.clone();
                             let ongoing_auction = tokio::spawn(async move {
-                                let _ = jitter.try_fill(
-                                    user.clone(), 
-                                    Pubkey::from_str(&taker).unwrap(), 
-                                    user_stats_key.clone(), 
-                                    order.clone(), 
-                                    order_signature.clone(),
-                                    referrer_info,
-                                    param.clone()
-                                ).await;
+                                let _ = jitter
+                                    .try_fill(
+                                        user.clone(),
+                                        Pubkey::from_str(&taker).unwrap(),
+                                        user_stats_key.clone(),
+                                        order.clone(),
+                                        order_signature.clone(),
+                                        referrer_info,
+                                        param.clone(),
+                                    )
+                                    .await;
                             });
 
                             self.ongoing_auctions.insert(order_sig, ongoing_auction);
                         } else {
                             log::warn!("Jitter not listening to {}", order.market_index);
-                            return Ok(())
+                            return Ok(());
                         }
                     }
                     MarketType::Spot => {
                         if let Some(param) = self.spot_params.get(&order.market_index) {
                             log::info!("Spot Auction");
 
-                            let spot_market = self.drift_client.get_spot_market_info(order.market_index).await?;
+                            let spot_market = self
+                                .drift_client
+                                .get_spot_market_info(order.market_index)
+                                .await?;
 
-                            if order.base_asset_amount - order.base_asset_amount_filled < spot_market.min_order_size {
+                            if order.base_asset_amount - order.base_asset_amount_filled
+                                < spot_market.min_order_size
+                            {
                                 log::warn!("Order filled within min order size");
-                                log::warn!("Remaining: {}", order.base_asset_amount - order.base_asset_amount_filled);
+                                log::warn!(
+                                    "Remaining: {}",
+                                    order.base_asset_amount - order.base_asset_amount_filled
+                                );
                                 log::warn!("Minimum order size: {}", spot_market.min_order_size);
-                                return Ok(())
+                                return Ok(());
                             }
 
-                            if (order.base_asset_amount as i128) - (order.base_asset_amount_filled as i128) > param.max_position.into() {
+                            if (order.base_asset_amount as i128)
+                                - (order.base_asset_amount_filled as i128)
+                                > param.max_position.into()
+                            {
                                 log::warn!("Order filled within max position");
-                                log::warn!("Remaining: {}", order.base_asset_amount - order.base_asset_amount_filled);
+                                log::warn!(
+                                    "Remaining: {}",
+                                    order.base_asset_amount - order.base_asset_amount_filled
+                                );
                                 log::warn!("Max position: {}", param.max_position);
-                                return Ok(())
+                                return Ok(());
                             }
 
-                            if (order.base_asset_amount as i128) - (order.base_asset_amount_filled as i128) < param.min_position.into() {
+                            if (order.base_asset_amount as i128)
+                                - (order.base_asset_amount_filled as i128)
+                                < param.min_position.into()
+                            {
                                 log::warn!("Order filled within min position");
-                                log::warn!("Remaining: {}", order.base_asset_amount - order.base_asset_amount_filled);
+                                log::warn!(
+                                    "Remaining: {}",
+                                    order.base_asset_amount - order.base_asset_amount_filled
+                                );
                                 log::warn!("Min position: {}", param.min_position);
-                                return Ok(())
+                                return Ok(());
                             }
 
                             let jitter = self.jitter.clone();
                             let taker = user_pubkey.clone();
                             let order_signature = order_sig.clone();
 
-                            let taker_stats: UserStats = self.drift_client.get_user_stats(&user.authority).await?;
+                            let taker_stats: UserStats =
+                                self.drift_client.get_user_stats(&user.authority).await?;
                             let referrer_info = ReferrerInfo::get_referrer_info(taker_stats);
 
                             let param = param.clone();
                             let ongoing_auction = tokio::spawn(async move {
-                                let _ = jitter.try_fill(
-                                    user.clone(), 
-                                    Pubkey::from_str(&taker).unwrap(), 
-                                    user_stats_key.clone(), 
-                                    order.clone(), 
-                                    order_signature.clone(),
-                                    referrer_info,
-                                    param.clone()
-                                ).await;
+                                let _ = jitter
+                                    .try_fill(
+                                        user.clone(),
+                                        Pubkey::from_str(&taker).unwrap(),
+                                        user_stats_key.clone(),
+                                        order.clone(),
+                                        order_signature.clone(),
+                                        referrer_info,
+                                        param.clone(),
+                                    )
+                                    .await;
                             });
 
                             self.ongoing_auctions.insert(order_sig, ongoing_auction);
                         } else {
                             log::warn!("Jitter not listening to {}", order.market_index);
-                            return Ok(())
+                            return Ok(());
                         }
                     }
                 }
@@ -365,38 +419,46 @@ impl<T: AccountProvider + Clone> Jitter<T> {
 
 /// Aggressive JIT making strategy
 pub struct Shotgun<T: AccountProvider> {
-    pub jit_proxy_client: JitProxyClient<T>
+    pub jit_proxy_client: JitProxyClient<T>,
 }
 
 /// Implementing the Sniper is left as an exercise for the reader.
 /// Good luck!
 pub struct Sniper<T: AccountProvider> {
     pub jit_proxy_client: JitProxyClient<T>,
-    pub slot_subscriber: SlotSubscriber
+    pub slot_subscriber: SlotSubscriber,
 }
 
 #[async_trait]
 impl<T: AccountProvider> JitterStrategy for Shotgun<T> {
     async fn try_fill(
-        &self, 
-        taker: User, 
-        taker_key: Pubkey, 
-        taker_stats_key: Pubkey, 
-        order: Order, 
+        &self,
+        taker: User,
+        taker_key: Pubkey,
+        taker_stats_key: Pubkey,
+        order: Order,
         order_sig: String,
         referrer_info: Option<ReferrerInfo>,
         params: JitParams,
     ) -> JitResult<()> {
         log::info!("Trying to fill with Shotgun:");
         log_details(&order);
-        
+
         for i in 0..order.auction_duration {
             let referrer_info = referrer_info.clone();
-            log::info!("Trying to fill: {:?} -> Attempt: {}", order_sig.clone(), i + 1);
+            log::info!(
+                "Trying to fill: {:?} -> Attempt: {}",
+                order_sig.clone(),
+                i + 1
+            );
 
             if params.max_position == 0 || params.min_position == 0 {
-                log::warn!("min or max position is 0 -> min: {} max: {}", params.min_position, params.max_position);
-                return Ok(())
+                log::warn!(
+                    "min or max position is 0 -> min: {} max: {}",
+                    params.min_position,
+                    params.max_position
+                );
+                return Ok(());
             }
 
             let jit_ix_params = JitIxParams::new(
@@ -422,8 +484,8 @@ impl<T: AccountProvider> JitterStrategy for Shotgun<T> {
                     }
                     log::info!("Order filled");
                     log::info!("Signature: {:?}", sig);
-                    return Ok(())
-                },
+                    return Ok(());
+                }
                 Err(e) => {
                     let err = e.to_string();
                     match check_err(err, order_sig.clone()) {
@@ -431,7 +493,7 @@ impl<T: AccountProvider> JitterStrategy for Shotgun<T> {
                         None => {
                             tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
                             continue;
-                        },
+                        }
                     }
                 }
             }
