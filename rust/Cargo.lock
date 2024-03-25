@@ -1063,32 +1063,6 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
 name = "drift"
-version = "2.53.0"
-source = "git+https://github.com/drift-labs/protocol-v2.git?tag=v2.53.0#376187a77283ae8095027a48e4a75a2511c33b12"
-dependencies = [
- "anchor-lang",
- "anchor-spl",
- "arrayref",
- "base64 0.13.1",
- "borsh",
- "bytemuck",
- "drift-macros",
- "enumflags2",
- "num-derive",
- "num-integer",
- "num-traits",
- "phoenix-v1 0.2.4 (git+https://github.com/drift-labs/phoenix-v1?rev=4c65c9)",
- "pyth-client",
- "serum_dex",
- "solana-program",
- "solana-security-txt",
- "static_assertions",
- "thiserror",
- "uint",
-]
-
-[[package]]
-name = "drift"
 version = "2.71.0"
 source = "git+https://github.com/drift-labs/protocol-v2.git?tag=v2.71.0#7df812dc26f590fd96f8623de0a93faf471d2193"
 dependencies = [
@@ -1103,7 +1077,7 @@ dependencies = [
  "num-derive",
  "num-integer",
  "num-traits",
- "phoenix-v1 0.2.4 (git+https://github.com/drift-labs/phoenix-v1?rev=bf6b84)",
+ "phoenix-v1",
  "pyth-client",
  "serum_dex",
  "solana-program",
@@ -1132,7 +1106,7 @@ dependencies = [
  "base64 0.13.1",
  "bytemuck",
  "dashmap",
- "drift 2.71.0",
+ "drift",
  "env_logger 0.10.2",
  "fnv",
  "futures-util",
@@ -1885,12 +1859,12 @@ checksum = "b1a46d1a171d865aa5f83f92695765caa047a9b4cbae2cbf37dbd613a793fd4c"
 [[package]]
 name = "jit-proxy"
 version = "0.10.2"
-source = "git+https://github.com/drift-labs/jit-proxy#b4c6d572399a06bdaa092eb3a28f627e87d532ca"
+source = "git+https://github.com/soundsonacid/jit-proxy#245a54eda51220f8904b7f88c9310ca5660adb37"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
  "bytemuck",
- "drift 2.53.0",
+ "drift",
  "static_assertions",
 ]
 
@@ -2463,26 +2437,6 @@ dependencies = [
 [[package]]
 name = "phoenix-v1"
 version = "0.2.4"
-source = "git+https://github.com/drift-labs/phoenix-v1?rev=4c65c9#4c65c97cd62493e27425ea2830447c833152bed1"
-dependencies = [
- "borsh",
- "bytemuck",
- "ellipsis-macros",
- "itertools 0.10.5",
- "lib-sokoban",
- "num_enum",
- "shank",
- "solana-program",
- "solana-security-txt",
- "spl-associated-token-account",
- "spl-token",
- "static_assertions",
- "thiserror",
-]
-
-[[package]]
-name = "phoenix-v1"
-version = "0.2.4"
 source = "git+https://github.com/drift-labs/phoenix-v1?rev=bf6b84#bf6b8447047aa16485d8d976528e43f5d53331d9"
 dependencies = [
  "borsh",
@@ -2932,7 +2886,7 @@ dependencies = [
  "async-trait",
  "dashmap",
  "dotenv",
- "drift 2.71.0",
+ "drift",
  "drift-sdk",
  "env_logger 0.10.2",
  "futures",

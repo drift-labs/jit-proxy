@@ -17,6 +17,7 @@ use drift_sdk::{
 use jit_proxy::state::PriceType;
 use solana_sdk::signature::Signature;
 use tokio::sync::mpsc::{self, Receiver, Sender};
+use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 
 use crate::types::JitResult;
@@ -104,7 +105,7 @@ pub struct Jitter<T: AccountProvider> {
     perp_params: DashMap<u16, JitParams>,
     spot_params: DashMap<u16, JitParams>,
     ongoing_auctions: DashMap<String, JoinHandle<()>>,
-    exclude_auction: Option<Box<ExcludeAuctionFn>>,
+    exclude_auction: RwLock<Option<Box<ExcludeAuctionFn>>>,
     jitter: Arc<dyn JitterStrategy + Send + Sync>,
 }
 
@@ -132,7 +133,7 @@ impl<T: AccountProvider + Clone> Jitter<T> {
             perp_params: DashMap::new(),
             spot_params: DashMap::new(),
             ongoing_auctions: DashMap::new(),
-            exclude_auction: None,
+            exclude_auction: RwLock::new(None),
             jitter,
         })
     }
@@ -151,7 +152,7 @@ impl<T: AccountProvider + Clone> Jitter<T> {
             perp_params: DashMap::new(),
             spot_params: DashMap::new(),
             ongoing_auctions: DashMap::new(),
-            exclude_auction: None,
+            exclude_auction: RwLock::new(None),
             jitter: shotgun,
         })
     }
@@ -221,11 +222,13 @@ impl<T: AccountProvider + Clone> Jitter<T> {
                     continue;
                 }
 
-                if let Some(exclude_auction) = &self.exclude_auction {
+                let exclude_auction_reader = self.exclude_auction.read().await;
+                if let Some(exclude_auction) = &*exclude_auction_reader {
                     if exclude_auction(&user, &user_pubkey, order.clone()) {
                         continue;
                     }
                 }
+                drop(exclude_auction_reader);
 
                 let order_sig = self.get_order_signatures(&user_pubkey, order.order_id);
 
@@ -408,8 +411,9 @@ impl<T: AccountProvider + Clone> Jitter<T> {
         self.spot_params.insert(market_index, params);
     }
 
-    pub fn set_exclude_auction(&mut self, exclude_auction: Box<ExcludeAuctionFn>) {
-        self.exclude_auction = Some(exclude_auction);
+    pub async fn set_exclude_auction(&self, exclude_auction: Box<ExcludeAuctionFn>) {
+        let mut exclude_auction_writer = self.exclude_auction.write().await;
+        *exclude_auction_writer = Some(exclude_auction);
     }
 
     pub fn get_order_signatures(&self, taker_key: &str, order_id: u32) -> String {
