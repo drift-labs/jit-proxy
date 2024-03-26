@@ -25,7 +25,7 @@ use crate::{
     types::ComputeBudgetParams,
 };
 
-type ExcludeAuctionFn = dyn Fn(&User, &String, Order) -> bool + Send + Sync;
+pub type ExcludeAuctionFn = dyn Fn(&User, &String, Order) -> bool + Send + Sync;
 
 #[inline(always)]
 fn log_details(order: &Order) {
