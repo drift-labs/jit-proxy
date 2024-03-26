@@ -14,7 +14,7 @@ use drift_sdk::{
     websocket_program_account_subscriber::ProgramAccountUpdate,
     AccountProvider, DriftClient, Pubkey, Wallet,
 };
-use jit_proxy::state::PriceType;
+pub use jit_proxy::state::PriceType;
 use solana_sdk::signature::Signature;
 use tokio::sync::mpsc::{self, Receiver, Sender};
 use tokio::task::JoinHandle;
