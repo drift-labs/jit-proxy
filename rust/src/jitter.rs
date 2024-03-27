@@ -1,4 +1,10 @@
-use std::{str::FromStr, sync::Arc};
+use std::{
+    str::FromStr,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+};
 
 use async_trait::async_trait;
 use dashmap::DashMap;
@@ -104,7 +110,7 @@ pub struct Jitter<T: AccountProvider> {
     perp_params: DashMap<u16, JitParams>,
     spot_params: DashMap<u16, JitParams>,
     ongoing_auctions: DashMap<String, JoinHandle<()>>,
-    exclude_auction: Option<Box<ExcludeAuctionFn>>,
+    exclusion_criteria: AtomicBool,
     jitter: Arc<dyn JitterStrategy + Send + Sync>,
 }
 
@@ -132,7 +138,7 @@ impl<T: AccountProvider + Clone> Jitter<T> {
             perp_params: DashMap::new(),
             spot_params: DashMap::new(),
             ongoing_auctions: DashMap::new(),
-            exclude_auction: None,
+            exclusion_criteria: AtomicBool::new(false),
             jitter,
         })
     }
@@ -151,7 +157,7 @@ impl<T: AccountProvider + Clone> Jitter<T> {
             perp_params: DashMap::new(),
             spot_params: DashMap::new(),
             ongoing_auctions: DashMap::new(),
-            exclude_auction: None,
+            exclusion_criteria: AtomicBool::new(false),
             jitter: shotgun,
         })
     }
@@ -221,10 +227,8 @@ impl<T: AccountProvider + Clone> Jitter<T> {
                     continue;
                 }
 
-                if let Some(exclude_auction) = &self.exclude_auction {
-                    if exclude_auction(&user, &user_pubkey, order.clone()) {
-                        continue;
-                    }
+                if self.exclusion_criteria.load(Ordering::Relaxed) {
+                    continue;
                 }
 
                 let order_sig = self.get_order_signatures(&user_pubkey, order.order_id);
@@ -408,8 +412,9 @@ impl<T: AccountProvider + Clone> Jitter<T> {
         self.spot_params.insert(market_index, params);
     }
 
-    pub fn set_exclude_auction(&mut self, exclude_auction: Box<ExcludeAuctionFn>) {
-        self.exclude_auction = Some(exclude_auction);
+    pub fn set_exclusion_criteria(&self, exclusion_criteria: bool) {
+        self.exclusion_criteria
+            .store(exclusion_criteria, Ordering::Relaxed);
     }
 
     pub fn get_order_signatures(&self, taker_key: &str, order_id: u32) -> String {
