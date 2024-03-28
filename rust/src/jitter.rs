@@ -264,19 +264,6 @@ impl<T: AccountProvider + Clone> Jitter<T> {
 
                             if (order.base_asset_amount as i128)
                                 - (order.base_asset_amount_filled as i128)
-                                > param.max_position.into()
-                            {
-                                log::warn!("Order filled within max position");
-                                log::warn!(
-                                    "Remaining: {}",
-                                    order.base_asset_amount - order.base_asset_amount_filled
-                                );
-                                log::warn!("Max position: {}", param.max_position);
-                                return Ok(());
-                            }
-
-                            if (order.base_asset_amount as i128)
-                                - (order.base_asset_amount_filled as i128)
                                 < param.min_position.into()
                             {
                                 log::warn!("Order filled within min position");
@@ -338,19 +325,6 @@ impl<T: AccountProvider + Clone> Jitter<T> {
                                     order.base_asset_amount - order.base_asset_amount_filled
                                 );
                                 log::warn!("Minimum order size: {}", spot_market.min_order_size);
-                                return Ok(());
-                            }
-
-                            if (order.base_asset_amount as i128)
-                                - (order.base_asset_amount_filled as i128)
-                                > param.max_position.into()
-                            {
-                                log::warn!("Order filled within max position");
-                                log::warn!(
-                                    "Remaining: {}",
-                                    order.base_asset_amount - order.base_asset_amount_filled
-                                );
-                                log::warn!("Max position: {}", param.max_position);
                                 return Ok(());
                             }
 
