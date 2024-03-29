@@ -201,7 +201,7 @@ impl<T: AccountProvider> JitProxyClient<T> {
                 )
                 .await;
             
-            log::info!("fill time: {:?}", start.elapsed());
+            log::error!("fill time: {:?}", start.elapsed());
             sig.map_err(|e| {
                 log::error!("Error: {}", e);
                 JitError::Sdk(e.to_string())
