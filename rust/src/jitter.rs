@@ -239,8 +239,6 @@ impl<T: AccountProvider + Clone> Jitter<T> {
 
                 match order.market_type {
                     MarketType::Perp => {
-                        log::info!("Perp Auction");
-
                         if let Some(param) = self.perp_params.get(&order.market_index) {
                             let perp_market: PerpMarket = self
                                 .drift_client
@@ -309,8 +307,6 @@ impl<T: AccountProvider + Clone> Jitter<T> {
                     }
                     MarketType::Spot => {
                         if let Some(param) = self.spot_params.get(&order.market_index) {
-                            log::info!("Spot Auction");
-
                             let spot_market = self
                                 .drift_client
                                 .get_spot_market_info(order.market_index)
@@ -421,6 +417,7 @@ impl<T: AccountProvider> JitterStrategy for Shotgun<T> {
         params: JitParams,
     ) -> JitResult<()> {
         log::info!("Trying to fill with Shotgun:");
+        let now = std::time::Instant::now();
         log_details(&order);
 
         for i in 0..order.auction_duration {
@@ -454,7 +451,7 @@ impl<T: AccountProvider> JitterStrategy for Shotgun<T> {
                 None,
             );
 
-            let jit_result = self.jit_proxy_client.jit(jit_ix_params).await;
+            let jit_result = self.jit_proxy_client.jit(jit_ix_params, now).await;
 
             match jit_result {
                 Ok(sig) => {

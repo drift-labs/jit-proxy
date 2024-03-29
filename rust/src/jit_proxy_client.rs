@@ -88,7 +88,7 @@ impl<T: AccountProvider> JitProxyClient<T> {
         self.cu_params = Some(cu_params);
     }
 
-    pub async fn jit(&self, params: JitIxParams) -> JitResult<Signature> {
+    pub async fn jit(&self, params: JitIxParams, start: std::time::Instant) -> JitResult<Signature> {
         if let Some(order) = params
             .taker
             .orders
@@ -200,7 +200,8 @@ impl<T: AccountProvider> JitProxyClient<T> {
                     self.config.unwrap_or(RpcSendTransactionConfig::default()),
                 )
                 .await;
-
+            
+            log::info!("fill time: {:?}", start.elapsed());
             sig.map_err(|e| {
                 log::error!("Error: {}", e);
                 JitError::Sdk(e.to_string())
