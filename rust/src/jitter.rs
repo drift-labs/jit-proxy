@@ -125,6 +125,7 @@ pub trait JitterStrategy {
         order_sig: String,
         referrer_info: Option<ReferrerInfo>,
         params: JitParams,
+        now: std::time::Instant,
     ) -> JitResult<()>;
 }
 
@@ -165,7 +166,7 @@ impl<T: AccountProvider + Clone> Jitter<T> {
     // Subscribe to auction events and start listening for them
     pub async fn subscribe(self: Arc<Self>, url: String) -> JitResult<()> {
         let (auction_sender, mut auction_receiver): (
-            Sender<Box<dyn Event>>,
+            Sender<Box<(dyn Event)>>,
             Receiver<Box<dyn Event>>,
         ) = mpsc::channel(100);
 
@@ -213,27 +214,20 @@ impl<T: AccountProvider + Clone> Jitter<T> {
     pub async fn on_auction(&self, event: Box<dyn Event>) -> JitResult<()> {
         if let Some(auction) = event.as_any().downcast_ref::<ProgramAccountUpdate<User>>() {
             log::info!("Auction received");
+            let now = std::time::Instant::now();
 
-            let user_pubkey = auction.pubkey.clone();
+            let user_pubkey = &auction.pubkey;
             let user = auction.data_and_slot.data.clone();
             let user_stats_key = Wallet::derive_stats_account(&user.authority, &drift_program);
 
             for order in user.orders {
-                if order.status != OrderStatus::Open {
-                    continue;
-                }
-
-                if !order.has_auction() {
-                    continue;
-                }
-
-                if self.exclusion_criteria.load(Ordering::Relaxed) {
+                if order.status != OrderStatus::Open || !order.has_auction() || self.exclusion_criteria.load(Ordering::Relaxed) {
                     continue;
                 }
 
                 let order_sig = self.get_order_signatures(&user_pubkey, order.order_id);
 
-                if let Some(_) = self.ongoing_auctions.get(&order_sig) {
+                if self.ongoing_auctions.contains_key(&order_sig) {
                     continue;
                 }
 
@@ -242,34 +236,25 @@ impl<T: AccountProvider + Clone> Jitter<T> {
                         if let Some(param) = self.perp_params.get(&order.market_index) {
                             let perp_market: PerpMarket = self
                                 .drift_client
-                                .get_perp_market_info(order.market_index)
-                                .await?;
+                                .get_perp_market_account(order.market_index).expect("perp market");
+                            let remaining = order.base_asset_amount - order.base_asset_amount_filled;
+                            let min_order_size = perp_market.amm.min_order_size;
 
-                            if order.base_asset_amount - order.base_asset_amount_filled
-                                < perp_market.amm.min_order_size
-                            {
-                                log::warn!("Order filled within min order size");
+                            if remaining < min_order_size {
                                 log::warn!(
-                                    "Remaining: {}",
-                                    order.base_asset_amount - order.base_asset_amount_filled
-                                );
-                                log::warn!(
-                                    "Minimum order size: {}",
-                                    perp_market.amm.min_order_size
+                                    "Order filled within min order size\nRemaining: {}\nMinimum order size: {}",
+                                    remaining,
+                                    min_order_size
                                 );
                                 return Ok(());
                             }
 
-                            if (order.base_asset_amount as i128)
-                                - (order.base_asset_amount_filled as i128)
-                                < param.min_position.into()
-                            {
-                                log::warn!("Order filled within min position");
+                            if (remaining as i128) < param.min_position.into() {
                                 log::warn!(
-                                    "Remaining: {}",
-                                    order.base_asset_amount - order.base_asset_amount_filled
+                                    "Order filled within min position\nRemaining: {}\nMin position: {}",
+                                    remaining,
+                                    param.min_position
                                 );
-                                log::warn!("Min position: {}", param.min_position);
                                 return Ok(());
                             }
 
@@ -281,7 +266,7 @@ impl<T: AccountProvider + Clone> Jitter<T> {
                                 .drift_client
                                 .get_user_stats(&user.authority)
                                 .await
-                                .unwrap();
+                                .expect("user stats");
                             let referrer_info = ReferrerInfo::get_referrer_info(taker_stats);
 
                             let param = param.clone();
@@ -295,6 +280,7 @@ impl<T: AccountProvider + Clone> Jitter<T> {
                                         order_signature.clone(),
                                         referrer_info,
                                         param.clone(),
+                                        now
                                     )
                                     .await;
                             });
@@ -309,18 +295,17 @@ impl<T: AccountProvider + Clone> Jitter<T> {
                         if let Some(param) = self.spot_params.get(&order.market_index) {
                             let spot_market = self
                                 .drift_client
-                                .get_spot_market_info(order.market_index)
-                                .await?;
+                                .get_spot_market_account(order.market_index)
+                                .expect("spot market");
 
                             if order.base_asset_amount - order.base_asset_amount_filled
                                 < spot_market.min_order_size
                             {
-                                log::warn!("Order filled within min order size");
                                 log::warn!(
-                                    "Remaining: {}",
-                                    order.base_asset_amount - order.base_asset_amount_filled
+                                    "Order filled within min order size\nRemaining: {}\nMinimum order size: {}",
+                                    order.base_asset_amount - order.base_asset_amount_filled,
+                                    spot_market.min_order_size
                                 );
-                                log::warn!("Minimum order size: {}", spot_market.min_order_size);
                                 return Ok(());
                             }
 
@@ -328,12 +313,11 @@ impl<T: AccountProvider + Clone> Jitter<T> {
                                 - (order.base_asset_amount_filled as i128)
                                 < param.min_position.into()
                             {
-                                log::warn!("Order filled within min position");
                                 log::warn!(
-                                    "Remaining: {}",
-                                    order.base_asset_amount - order.base_asset_amount_filled
+                                    "Order filled within min order size\nRemaining: {}\nMinimum order size: {}",
+                                    order.base_asset_amount - order.base_asset_amount_filled,
+                                    spot_market.min_order_size
                                 );
-                                log::warn!("Min position: {}", param.min_position);
                                 return Ok(());
                             }
 
@@ -356,6 +340,7 @@ impl<T: AccountProvider + Clone> Jitter<T> {
                                         order_signature.clone(),
                                         referrer_info,
                                         param.clone(),
+                                        now
                                     )
                                     .await;
                             });
@@ -415,9 +400,9 @@ impl<T: AccountProvider> JitterStrategy for Shotgun<T> {
         order_sig: String,
         referrer_info: Option<ReferrerInfo>,
         params: JitParams,
+        now: std::time::Instant,
     ) -> JitResult<()> {
         log::info!("Trying to fill with Shotgun:");
-        let now = std::time::Instant::now();
         log_details(&order);
 
         for i in 0..order.auction_duration {

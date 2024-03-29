@@ -9,7 +9,7 @@ edition = "2021"
 anchor-client = "0.27.0"
 jit-proxy = { git = "https://github.com/soundsonacid/jit-proxy", commit = "740bc36" }
 solana-sdk = "1.14.16"
-drift-sdk = { git = "https://github.com/soundsonacid/drift-rs", commit = "3f1b0fb" }
+drift-sdk = { git = "https://github.com/soundsonacid/drift-rs", commit = "c825659" }
 tokio = { version = "1.35.1", features = ["full"] }
 drift = { git = "https://github.com/drift-labs/protocol-v2.git", commit = "2bbe28c", features = ["mainnet-beta"]}
 thiserror = "1.0.38"

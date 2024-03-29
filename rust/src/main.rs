@@ -39,6 +39,8 @@ async fn main() {
     .await
     .unwrap();
 
+    drift_client.subscribe().await.unwrap();
+
     let config = RpcSendTransactionConfig::default();
 
     let cu_params = ComputeBudgetParams::new(100_000, 1_400_000);

@@ -89,6 +89,7 @@ impl<T: AccountProvider> JitProxyClient<T> {
     }
 
     pub async fn jit(&self, params: JitIxParams, start: std::time::Instant) -> JitResult<Signature> {
+        let start_jit = std::time::Instant::now();
         if let Some(order) = params
             .taker
             .orders
@@ -141,13 +142,13 @@ impl<T: AccountProvider> JitProxyClient<T> {
             if order.market_type == MarketType::Spot {
                 let spot_market_vault = self
                     .drift_client
-                    .get_spot_market_info(order.market_index)
-                    .await?
+                    .get_spot_market_account(order.market_index)
+                    .expect("spot market")
                     .vault;
                 let quote_spot_market_vault = self
                     .drift_client
-                    .get_spot_market_info(QUOTE_SPOT_MARKET_INDEX)
-                    .await?
+                    .get_spot_market_account(QUOTE_SPOT_MARKET_INDEX)
+                    .expect("spot market")
                     .vault;
                 accounts.push(AccountMeta::new_readonly(spot_market_vault, false));
                 accounts.push(AccountMeta::new_readonly(quote_spot_market_vault, false));
@@ -202,6 +203,7 @@ impl<T: AccountProvider> JitProxyClient<T> {
                 .await;
             
             log::error!("fill time: {:?}", start.elapsed());
+            log::error!("jit time: {:?}", start_jit.elapsed());
             sig.map_err(|e| {
                 log::error!("Error: {}", e);
                 JitError::Sdk(e.to_string())
