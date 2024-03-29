@@ -115,6 +115,7 @@ impl<T: AccountProvider> JitProxyClient<T> {
                 }
             };
 
+            let build_accounts_start = std::time::Instant::now();
             let mut accounts = build_accounts(
                 program_data,
                 jit_proxy::accounts::Jit {
@@ -133,6 +134,7 @@ impl<T: AccountProvider> JitProxyClient<T> {
                 &[],
                 &writable_markets.as_slice(),
             );
+            log::error!("build accounts time: {:?}", build_accounts_start.elapsed());
 
             if let Some(referrer_info) = params.referrer_info {
                 accounts.push(AccountMeta::new(referrer_info.referrer(), false));
@@ -184,6 +186,7 @@ impl<T: AccountProvider> JitProxyClient<T> {
 
             let lut = program_data.lookup_table.clone();
 
+            let try_compile_start = std::time::Instant::now();
             let message = v0::Message::try_compile(
                 &self.drift_client.wallet().authority(),
                 &ixs.as_slice(),
@@ -191,9 +194,11 @@ impl<T: AccountProvider> JitProxyClient<T> {
                 Default::default(),
             )
             .expect("failed to compile message");
+            log::error!("try compile time: {:?}", try_compile_start.elapsed());
 
             let tx = VersionedMessage::V0(message);
 
+            let send_start = std::time::Instant::now();
             let sig = self
                 .drift_client
                 .sign_and_send_with_config(
@@ -201,6 +206,7 @@ impl<T: AccountProvider> JitProxyClient<T> {
                     self.config.unwrap_or(RpcSendTransactionConfig::default()),
                 )
                 .await;
+            log::error!("send time: {:?}", send_start.elapsed());
             
             log::error!("fill time: {:?}", start.elapsed());
             log::error!("jit time: {:?}", start_jit.elapsed());
