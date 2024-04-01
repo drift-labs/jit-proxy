@@ -221,7 +221,10 @@ impl<T: AccountProvider + Clone> Jitter<T> {
             let user_stats_key = Wallet::derive_stats_account(&user.authority, &drift_program);
 
             for order in user.orders {
-                if order.status != OrderStatus::Open || !order.has_auction() || self.exclusion_criteria.load(Ordering::Relaxed) {
+                if order.status != OrderStatus::Open
+                    || !order.has_auction()
+                    || self.exclusion_criteria.load(Ordering::Relaxed)
+                {
                     continue;
                 }
 
@@ -236,8 +239,10 @@ impl<T: AccountProvider + Clone> Jitter<T> {
                         if let Some(param) = self.perp_params.get(&order.market_index) {
                             let perp_market: PerpMarket = self
                                 .drift_client
-                                .get_perp_market_account(order.market_index).expect("perp market");
-                            let remaining = order.base_asset_amount - order.base_asset_amount_filled;
+                                .get_perp_market_account(order.market_index)
+                                .expect("perp market");
+                            let remaining =
+                                order.base_asset_amount - order.base_asset_amount_filled;
                             let min_order_size = perp_market.amm.min_order_size;
 
                             if remaining < min_order_size {
@@ -280,7 +285,7 @@ impl<T: AccountProvider + Clone> Jitter<T> {
                                         order_signature.clone(),
                                         referrer_info,
                                         param.clone(),
-                                        now
+                                        now,
                                     )
                                     .await;
                             });
@@ -340,7 +345,7 @@ impl<T: AccountProvider + Clone> Jitter<T> {
                                         order_signature.clone(),
                                         referrer_info,
                                         param.clone(),
-                                        now
+                                        now,
                                     )
                                     .await;
                             });
