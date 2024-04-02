@@ -125,7 +125,6 @@ pub trait JitterStrategy {
         order_sig: String,
         referrer_info: Option<ReferrerInfo>,
         params: JitParams,
-        now: std::time::Instant,
     ) -> JitResult<()>;
 }
 
@@ -214,8 +213,6 @@ impl<T: AccountProvider + Clone> Jitter<T> {
     pub async fn on_auction(&self, event: Box<dyn Event>) -> JitResult<()> {
         if let Some(auction) = event.as_any().downcast_ref::<ProgramAccountUpdate<User>>() {
             log::info!("Auction received");
-            let now = std::time::Instant::now();
-
             let user_pubkey = &auction.pubkey;
             let user = auction.data_and_slot.data.clone();
             let user_stats_key = Wallet::derive_stats_account(&user.authority, &drift_program);
@@ -285,7 +282,6 @@ impl<T: AccountProvider + Clone> Jitter<T> {
                                         order_signature.clone(),
                                         referrer_info,
                                         param.clone(),
-                                        now,
                                     )
                                     .await;
                             });
@@ -345,7 +341,6 @@ impl<T: AccountProvider + Clone> Jitter<T> {
                                         order_signature.clone(),
                                         referrer_info,
                                         param.clone(),
-                                        now,
                                     )
                                     .await;
                             });
@@ -405,7 +400,6 @@ impl<T: AccountProvider> JitterStrategy for Shotgun<T> {
         order_sig: String,
         referrer_info: Option<ReferrerInfo>,
         params: JitParams,
-        now: std::time::Instant,
     ) -> JitResult<()> {
         log::info!("Trying to fill with Shotgun:");
         log_details(&order);
@@ -441,7 +435,7 @@ impl<T: AccountProvider> JitterStrategy for Shotgun<T> {
                 None,
             );
 
-            let jit_result = self.jit_proxy_client.jit(jit_ix_params, now).await;
+            let jit_result = self.jit_proxy_client.jit(jit_ix_params).await;
 
             match jit_result {
                 Ok(sig) => {

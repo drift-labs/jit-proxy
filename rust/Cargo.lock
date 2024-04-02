@@ -1063,8 +1063,8 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
 name = "drift"
-version = "2.74.0"
-source = "git+https://github.com/drift-labs/protocol-v2.git#e54d58596474a032446006c1caa2d6179cf2c6c4"
+version = "2.75.0"
+source = "git+https://github.com/drift-labs/protocol-v2.git#8c4cf61b84cdd2aac1f08b653bdc5052e2395be9"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
@@ -1100,7 +1100,7 @@ dependencies = [
 [[package]]
 name = "drift-sdk"
 version = "0.1.0"
-source = "git+https://github.com/soundsonacid/drift-rs#9499f00f9693c580249e2439af327977ae2318d8"
+source = "git+https://github.com/drift-labs/drift-rs#755d40d4a94c98e5d417cc9a89fdfeb48e9dcace"
 dependencies = [
  "anchor-lang",
  "base64 0.13.1",
@@ -1944,7 +1944,7 @@ checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 [[package]]
 name = "jit-proxy"
 version = "0.10.2"
-source = "git+https://github.com/soundsonacid/jit-proxy#a419a7ac40f50565244e6ea5f1189cf330f162b3"
+source = "git+https://github.com/soundsonacid/jit-proxy#ff3ee0c48e0aaae38dd6b777f3856f150e7528bf"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
@@ -4198,7 +4198,7 @@ checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 [[package]]
 name = "switchboard"
 version = "0.1.0"
-source = "git+https://github.com/drift-labs/protocol-v2.git#e54d58596474a032446006c1caa2d6179cf2c6c4"
+source = "git+https://github.com/drift-labs/protocol-v2.git#8c4cf61b84cdd2aac1f08b653bdc5052e2395be9"
 dependencies = [
  "anchor-lang",
 ]
