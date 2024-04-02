@@ -7,11 +7,11 @@ edition = "2021"
 
 [dependencies]
 anchor-client = "0.27.0"
-jit-proxy = { git = "https://github.com/drift-labs/jit-proxy", version = "0.10.2" }
+jit-proxy = { git = "https://github.com/soundsonacid/jit-proxy", commit = "740bc36" }
 solana-sdk = "1.14.16"
-drift-sdk = { git = "https://github.com/drift-labs/drift-rs", commit = "5aa2a79" }
+drift-sdk = { git = "https://github.com/drift-labs/drift-rs", commit = "755d40d" }
 tokio = { version = "1.35.1", features = ["full"] }
-drift = { git = "https://github.com/drift-labs/protocol-v2.git", tag = "v2.66.0", features = ["mainnet-beta"]}
+drift = { git = "https://github.com/drift-labs/protocol-v2.git", commit = "2bbe28c", features = ["mainnet-beta"]}
 thiserror = "1.0.38"
 log = "0.4.20"
 async-trait = "0.1.75"

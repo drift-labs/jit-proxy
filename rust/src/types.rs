@@ -1,6 +1,5 @@
-
-use thiserror::Error;
 use drift_sdk::types::SdkError;
+use thiserror::Error;
 
 pub type JitResult<T> = Result<T, JitError>;
 
@@ -11,7 +10,6 @@ pub enum JitError {
     #[error("{0}")]
     Sdk(String),
 }
-
 
 impl From<drift::error::ErrorCode> for JitError {
     fn from(error: drift::error::ErrorCode) -> Self {
@@ -38,7 +36,7 @@ impl ComputeBudgetParams {
             cu_limit,
         }
     }
-    
+
     pub fn microlamports_per_cu(&self) -> u64 {
         self.microlamports_per_cu
     }
