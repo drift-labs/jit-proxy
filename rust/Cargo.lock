@@ -1944,7 +1944,7 @@ checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 [[package]]
 name = "jit-proxy"
 version = "0.10.2"
-source = "git+https://github.com/soundsonacid/jit-proxy#ff3ee0c48e0aaae38dd6b777f3856f150e7528bf"
+source = "git+https://github.com/drift-labs/jit-proxy#8d5234f68d11d9f5c9311425c074ae34998d697f"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
