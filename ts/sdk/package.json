@@ -11,6 +11,6 @@
     "@solana/web3.js": "1.91.7"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   }
 }
