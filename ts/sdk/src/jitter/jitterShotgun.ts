@@ -1,4 +1,4 @@
-import { JitProxyClient, PriceType } from '../jitProxyClient';
+import { JitProxyClient } from '../jitProxyClient';
 import { PublicKey } from '@solana/web3.js';
 import {
 	AuctionSubscriber,

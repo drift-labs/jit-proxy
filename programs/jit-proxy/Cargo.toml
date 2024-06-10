@@ -14,8 +14,8 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = "0.27.0"
-anchor-spl = "0.27.0"
+anchor-lang = "0.29.0"
+anchor-spl = "0.29.0"
 bytemuck = { version = "1.4.0" }
-drift = { git = "https://github.com/drift-labs/protocol-v2.git", commit = "2bbe28c", features = ["cpi", "mainnet-beta"]}
+drift = { git = "https://github.com/drift-labs/protocol-v2.git", rev = "a95009", features = ["cpi", "mainnet-beta"]}
 static_assertions = "1.1.0"

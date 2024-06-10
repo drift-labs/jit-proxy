@@ -2,14 +2,14 @@ use anchor_lang::prelude::*;
 use drift::instructions::optional_accounts::{load_maps, AccountMaps};
 use drift::math::casting::Cast;
 use drift::math::safe_math::SafeMath;
-use drift::state::perp_market_map::MarketSet;
 use drift::state::user::User;
+use std::collections::BTreeSet;
 
 use crate::error::ErrorCode;
 use crate::state::MarketType;
 
-pub fn check_order_constraints<'info>(
-    ctx: Context<'_, '_, '_, 'info, CheckOrderConstraints<'info>>,
+pub fn check_order_constraints<'c: 'info, 'info>(
+    ctx: Context<'_, '_, 'c, 'info, CheckOrderConstraints<'info>>,
     constraints: Vec<OrderConstraint>,
 ) -> Result<()> {
     let clock = Clock::get()?;
@@ -24,8 +24,8 @@ pub fn check_order_constraints<'info>(
         mut oracle_map,
     } = load_maps(
         remaining_accounts_iter,
-        &MarketSet::new(),
-        &MarketSet::new(),
+        &BTreeSet::new(),
+        &BTreeSet::new(),
         slot,
         None,
     )?;
