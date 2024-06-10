@@ -1,29 +1,14 @@
-import { JitProxyClient, PriceType } from '../jitProxyClient';
+import { JitProxyClient } from '../jitProxyClient';
 import { PublicKey } from '@solana/web3.js';
 import {
 	AuctionSubscriber,
-	BN,
 	DriftClient,
 	Order,
+	PostOnlyParams,
 	UserAccount,
 	UserStatsMap,
 } from '@drift-labs/sdk';
 import { BaseJitter } from './baseJitter';
-
-export type UserFilter = (
-	userAccount: UserAccount,
-	userKey: string,
-	order: Order
-) => boolean;
-
-export type JitParams = {
-	bid: BN;
-	ask: BN;
-	minPosition: BN;
-	maxPosition;
-	priceType: PriceType;
-	subAccountId?: number;
-};
 
 export class JitterShotgun extends BaseJitter {
 	constructor({
@@ -54,55 +39,69 @@ export class JitterShotgun extends BaseJitter {
 	): () => Promise<void> {
 		return async () => {
 			let i = 0;
-			while (i < 10) {
+
+			const takerStats = await this.userStatsMap.mustGet(
+				taker.authority.toString()
+			);
+			const referrerInfo = takerStats.getReferrerInfo();
+
+			// assumes each preflight simulation takes ~1 slot
+			while (i < order.auctionDuration) {
 				const params = this.perpParams.get(order.marketIndex);
 				if (!params) {
-					this.onGoingAuctions.delete(orderSignature);
+					this.deleteOnGoingAuction(orderSignature);
 					return;
 				}
 
-				const takerStats = await this.userStatsMap.mustGet(
-					taker.authority.toString()
-				);
-				const referrerInfo = takerStats.getReferrerInfo();
+				const txParams = {
+					computeUnits: this.computeUnits,
+					computeUnitsPrice: this.computeUnitsPrice,
+				};
 
 				console.log(`Trying to fill ${orderSignature}`);
 				try {
-					const { txSig } = await this.jitProxyClient.jit({
-						takerKey,
-						takerStatsKey,
-						taker,
-						takerOrderId: order.orderId,
-						maxPosition: params.maxPosition,
-						minPosition: params.minPosition,
-						bid: params.bid,
-						ask: params.ask,
-						postOnly: null,
-						priceType: params.priceType,
-						referrerInfo,
-						subAccountId: params.subAccountId,
-					});
+					const { txSig } = await this.jitProxyClient.jit(
+						{
+							takerKey,
+							takerStatsKey,
+							taker,
+							takerOrderId: order.orderId,
+							maxPosition: params.maxPosition,
+							minPosition: params.minPosition,
+							bid: params.bid,
+							ask: params.ask,
+							postOnly: params.postOnlyParams ?? PostOnlyParams.MUST_POST_ONLY,
+							priceType: params.priceType,
+							referrerInfo,
+							subAccountId: params.subAccountId,
+						},
+						txParams
+					);
 
-					console.log(`Filled ${orderSignature} txSig ${txSig}`);
+					console.log(
+						`Successfully sent tx for ${orderSignature} txSig ${txSig}`
+					);
 					await sleep(10000);
-					this.onGoingAuctions.delete(orderSignature);
+					this.deleteOnGoingAuction(orderSignature);
 					return;
 				} catch (e) {
 					console.error(`Failed to fill ${orderSignature}`);
 					if (e.message.includes('0x1770') || e.message.includes('0x1771')) {
 						console.log('Order does not cross params yet, retrying');
+					} else if (e.message.includes('0x1779')) {
+						console.log('Order could not fill');
 					} else if (e.message.includes('0x1793')) {
 						console.log('Oracle invalid, retrying');
 					} else {
 						await sleep(10000);
-						this.onGoingAuctions.delete(orderSignature);
+						this.deleteOnGoingAuction(orderSignature);
 						return;
 					}
 				}
 				i++;
 			}
 
-			this.onGoingAuctions.delete(orderSignature);
+			this.deleteOnGoingAuction(orderSignature);
 		};
 	}
 }

@@ -5,17 +5,12 @@ import {
 	AuctionSubscriber,
 	BN,
 	BulkAccountLoader,
-	convertToNumber,
 	DriftClient,
-	getAuctionPrice,
-	getAuctionPriceForOracleOffsetAuction,
 	getUserStatsAccountPublicKey,
 	hasAuctionPrice,
 	isVariant,
-	OraclePriceData,
 	Order,
-	PRICE_PRECISION,
-	SlotSubscriber,
+	PostOnlyParams,
 	UserAccount,
 	UserStatsMap,
 } from '@drift-labs/sdk';
@@ -33,6 +28,7 @@ export type JitParams = {
 	maxPosition;
 	priceType: PriceType;
 	subAccountId?: number;
+	postOnlyParams?: PostOnlyParams;
 };
 
 export abstract class BaseJitter {
@@ -44,9 +40,13 @@ export abstract class BaseJitter {
 	perpParams = new Map<number, JitParams>();
 	spotParams = new Map<number, JitParams>();
 
+	seenOrders = new Set<string>();
 	onGoingAuctions = new Map<string, Promise<void>>();
 
 	userFilter: UserFilter;
+
+	computeUnits: number;
+	computeUnitsPrice: number;
 
 	constructor({
 		auctionSubscriber,
@@ -62,6 +62,12 @@ export abstract class BaseJitter {
 		this.auctionSubscriber = auctionSubscriber;
 		this.driftClient = driftClient;
 		this.jitProxyClient = jitProxyClient;
+		this.userStatsMap =
+			userStatsMap ||
+			new UserStatsMap(
+				this.driftClient,
+				new BulkAccountLoader(this.driftClient.connection, 'confirmed', 0)
+			);
 	}
 
 	async subscribe(): Promise<void> {
@@ -96,6 +102,11 @@ export abstract class BaseJitter {
 						takerKeyString,
 						order.orderId
 					);
+
+					if (this.seenOrders.has(orderSignature)) {
+						continue;
+					}
+					this.seenOrders.add(orderSignature);
 
 					if (this.onGoingAuctions.has(orderSignature)) {
 						continue;
@@ -165,6 +176,11 @@ export abstract class BaseJitter {
 		throw new Error('Not implemented');
 	}
 
+	deleteOnGoingAuction(orderSignature: string): void {
+		this.onGoingAuctions.delete(orderSignature);
+		this.seenOrders.delete(orderSignature);
+	}
+
 	getOrderSignatures(takerKey: string, orderId: number): string {
 		return `${takerKey}-${orderId}`;
 	}
@@ -179,5 +195,13 @@ export abstract class BaseJitter {
 
 	public setUserFilter(userFilter: UserFilter | undefined): void {
 		this.userFilter = userFilter;
+	}
+
+	public setComputeUnits(computeUnits: number): void {
+		this.computeUnits = computeUnits;
+	}
+
+	public setComputeUnitsPrice(computeUnitsPrice: number): void {
+		this.computeUnitsPrice = computeUnitsPrice;
 	}
 }

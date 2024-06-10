@@ -6,10 +6,12 @@ import {
 	DriftClient,
 	getAuctionPrice,
 	getAuctionPriceForOracleOffsetAuction,
+	getLimitPrice,
 	getVariant,
 	isVariant,
 	OraclePriceData,
 	Order,
+	PostOnlyParams,
 	PRICE_PRECISION,
 	SlotSubscriber,
 	UserAccount,
@@ -65,7 +67,7 @@ export class JitterSniper extends BaseJitter {
 		return async () => {
 			const params = this.perpParams.get(order.marketIndex);
 			if (!params) {
-				this.onGoingAuctions.delete(orderSignature);
+				this.deleteOnGoingAuction(orderSignature);
 				return;
 			}
 
@@ -87,9 +89,9 @@ export class JitterSniper extends BaseJitter {
 
 			// don't increase risk if we're past max positions
 			if (isVariant(order.marketType, 'perp')) {
-				const currPerpPos = this.driftClient
-					.getUser()
-					.getPerpPosition(order.marketIndex);
+				const currPerpPos =
+					this.driftClient.getUser().getPerpPosition(order.marketIndex) ||
+					this.driftClient.getUser().getEmptyPosition(order.marketIndex);
 				if (
 					currPerpPos.baseAssetAmount.lt(ZERO) &&
 					isVariant(order.direction, 'short')
@@ -100,7 +102,7 @@ export class JitterSniper extends BaseJitter {
 								order.marketType
 							)}-${order.marketIndex}) too much`
 						);
-						this.onGoingAuctions.delete(orderSignature);
+						this.deleteOnGoingAuction(orderSignature);
 						return;
 					}
 				} else if (
@@ -113,7 +115,7 @@ export class JitterSniper extends BaseJitter {
 								order.marketType
 							)}-${order.marketIndex}) too much`
 						);
-						this.onGoingAuctions.delete(orderSignature);
+						this.deleteOnGoingAuction(orderSignature);
 						return;
 					}
 				}
@@ -152,7 +154,7 @@ export class JitterSniper extends BaseJitter {
 			).then(async ({ slot, updatedDetails }) => {
 				if (slot === -1) {
 					console.log('Auction expired without crossing');
-					this.onGoingAuctions.delete(orderSignature);
+					this.deleteOnGoingAuction(orderSignature);
 					return;
 				}
 
@@ -186,44 +188,54 @@ export class JitterSniper extends BaseJitter {
 				)}
 				`);
 				let i = 0;
-				while (i < 3) {
+				while (i < 10) {
 					try {
-						const { txSig } = await this.jitProxyClient.jit({
-							takerKey,
-							takerStatsKey,
-							taker,
-							takerOrderId: order.orderId,
-							maxPosition: params.maxPosition,
-							minPosition: params.minPosition,
-							bid: params.bid,
-							ask: params.ask,
-							postOnly: null,
-							priceType: params.priceType,
-							referrerInfo,
-							subAccountId: params.subAccountId,
-						});
+						const txParams = {
+							computeUnits: this.computeUnits,
+							computeUnitsPrice: this.computeUnitsPrice,
+						};
+						const { txSig } = await this.jitProxyClient.jit(
+							{
+								takerKey,
+								takerStatsKey,
+								taker,
+								takerOrderId: order.orderId,
+								maxPosition: params.maxPosition,
+								minPosition: params.minPosition,
+								bid: params.bid,
+								ask: params.ask,
+								postOnly:
+									params.postOnlyParams ?? PostOnlyParams.MUST_POST_ONLY,
+								priceType: params.priceType,
+								referrerInfo,
+								subAccountId: params.subAccountId,
+							},
+							txParams
+						);
 
 						console.log(`Filled ${orderSignature} txSig ${txSig}`);
 						await sleep(3000);
-						this.onGoingAuctions.delete(orderSignature);
+						this.deleteOnGoingAuction(orderSignature);
 						return;
 					} catch (e) {
 						console.error(`Failed to fill ${orderSignature}`);
 						if (e.message.includes('0x1770') || e.message.includes('0x1771')) {
 							console.log('Order does not cross params yet');
+						} else if (e.message.includes('0x1779')) {
+							console.log('Order could not fill');
 						} else if (e.message.includes('0x1793')) {
 							console.log('Oracle invalid');
 						} else {
 							await sleep(3000);
-							this.onGoingAuctions.delete(orderSignature);
+							this.deleteOnGoingAuction(orderSignature);
 							return;
 						}
 					}
-					await sleep(50);
+					await sleep(200);
 					i++;
 				}
 			});
-			this.onGoingAuctions.delete(orderSignature);
+			this.deleteOnGoingAuction(orderSignature);
 		};
 	}
 
@@ -302,6 +314,26 @@ export class JitterSniper extends BaseJitter {
 			slotsTilCross++;
 		}
 
+		// if it doesnt cross during auction, check if limit price crosses
+		if (!willCross) {
+			const slotAfterAuction =
+				order.slot.toNumber() + order.auctionDuration + 1;
+			const limitPrice = getLimitPrice(order, oraclePrice, slotAfterAuction);
+			if (!limitPrice) {
+				willCross = true;
+				slotsTilCross = order.auctionDuration + 1;
+			} else {
+				const limitPriceNum = convertToNumber(limitPrice, PRICE_PRECISION);
+				if (makerOrderDir === 'buy' || limitPriceNum <= bid) {
+					willCross = true;
+					slotsTilCross = order.auctionDuration + 1;
+				} else if (makerOrderDir === 'sell' || limitPriceNum >= ask) {
+					willCross = true;
+					slotsTilCross = order.auctionDuration + 1;
+				}
+			}
+		}
+
 		return {
 			slotsTilCross,
 			willCross,
@@ -319,12 +351,12 @@ export class JitterSniper extends BaseJitter {
 		order: Order,
 		initialDetails: AuctionAndOrderDetails
 	): Promise<{ slot: number; updatedDetails: AuctionAndOrderDetails }> {
-		const auctionEndSlot = order.auctionDuration + order.slot.toNumber();
 		let currentDetails: AuctionAndOrderDetails = initialDetails;
 		let willCross = initialDetails.willCross;
-		if (this.slotSubscriber.currentSlot > auctionEndSlot) {
+		if (this.slotSubscriber.currentSlot > targetSlot) {
+			const slot = willCross ? this.slotSubscriber.currentSlot : -1;
 			return new Promise((resolve) =>
-				resolve({ slot: -1, updatedDetails: currentDetails })
+				resolve({ slot, updatedDetails: currentDetails })
 			);
 		}
 
@@ -342,13 +374,14 @@ export class JitterSniper extends BaseJitter {
 
 			// Update target slot as the bid/ask and the oracle changes
 			const intervalId = setInterval(async () => {
-				if (this.slotSubscriber.currentSlot >= auctionEndSlot) {
+				if (this.slotSubscriber.currentSlot >= targetSlot) {
 					this.slotSubscriber.eventEmitter.removeListener(
 						'newSlot',
 						slotListener
 					);
 					clearInterval(intervalId);
-					resolve({ slot: -1, updatedDetails: currentDetails });
+					const slot = willCross ? this.slotSubscriber.currentSlot : -1;
+					resolve({ slot, updatedDetails: currentDetails });
 				}
 
 				currentDetails = this.getAuctionAndOrderDetails(order);

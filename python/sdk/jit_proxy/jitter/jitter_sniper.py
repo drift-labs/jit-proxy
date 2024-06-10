@@ -3,7 +3,7 @@ import asyncio
 from dataclasses import dataclass
 from typing import Any, Coroutine
 
-from solders.pubkey import Pubkey
+from solders.pubkey import Pubkey # type: ignore
 
 from driftpy.drift_client import DriftClient
 from driftpy.auction_subscriber.auction_subscriber import AuctionSubscriber
@@ -205,6 +205,8 @@ class JitterSniper(BaseJitter):
                     self.logger.error(f"Failed to fill {order_sig}: {e}")
                     if "0x1770" in str(e) or "0x1771" in str(e):
                         self.logger.error("Order does not cross params yet")
+                    elif "0x1779" in str(e):
+                        self.logger.error("Order could not fill, retrying")
                     elif "0x1793" in str(e):
                         self.logger.error("Oracle invalid")
                     elif "0x1772" in str(e):
@@ -241,7 +243,7 @@ class JitterSniper(BaseJitter):
 
         auction_start_price = convert_to_number(
             get_auction_price_for_oracle_offset_auction(
-                order, order.slot, oracle_price.price
+                order, order.slot, oracle_price.price # type: ignore
             )
             if is_variant(order.order_type, "Oracle")
             else order.auction_start_price,
@@ -250,7 +252,7 @@ class JitterSniper(BaseJitter):
 
         auction_end_price = convert_to_number(
             get_auction_price_for_oracle_offset_auction(
-                order, order.slot + order.auction_duration - 1, oracle_price.price
+                order, order.slot + order.auction_duration - 1, oracle_price.price # type: ignore
             )
             if is_variant(order.order_type, "Oracle")
             else order.auction_end_price,
@@ -258,15 +260,15 @@ class JitterSniper(BaseJitter):
         )
 
         bid = (
-            convert_to_number(oracle_price.price + params.bid, PRICE_PRECISION)
-            if is_variant(params.price_type, "Oracle")
-            else convert_to_number(params.bid, PRICE_PRECISION)
+            convert_to_number(oracle_price.price + params.bid, PRICE_PRECISION) # type: ignore
+            if is_variant(params.price_type, "Oracle") # type: ignore
+            else convert_to_number(params.bid, PRICE_PRECISION) # type: ignore
         )
 
         ask = (
-            convert_to_number(oracle_price.price + params.ask, PRICE_PRECISION)
-            if is_variant(params.price_type, "Oracle")
-            else convert_to_number(params.ask, PRICE_PRECISION)
+            convert_to_number(oracle_price.price + params.ask, PRICE_PRECISION) # type: ignore
+            if is_variant(params.price_type, "Oracle") # type: ignore
+            else convert_to_number(params.ask, PRICE_PRECISION) # type: ignore
         )
 
         slots_until_cross = 0
@@ -280,7 +282,7 @@ class JitterSniper(BaseJitter):
                 if (
                     convert_to_number(
                         get_auction_price(
-                            order, order.slot + slots_until_cross, oracle_price.price
+                            order, order.slot + slots_until_cross, oracle_price.price # type: ignore
                         ),
                         PRICE_PRECISION,
                     )
@@ -292,7 +294,7 @@ class JitterSniper(BaseJitter):
                 if (
                     convert_to_number(
                         get_auction_price(
-                            order, order.slot + slots_until_cross, oracle_price.price
+                            order, order.slot + slots_until_cross, oracle_price.price # type: ignore
                         ),
                         PRICE_PRECISION,
                     )
@@ -310,12 +312,12 @@ class JitterSniper(BaseJitter):
             auction_start_price,
             auction_end_price,
             step_size,
-            oracle_price,
+            oracle_price, # type: ignore
         )
 
     async def wait_for_slot_or_cross_or_expiry(
         self, target_slot: int, order: Order, initial_details: AuctionAndOrderDetails
-    ) -> (int, AuctionAndOrderDetails):
+    ) -> (int, AuctionAndOrderDetails): # type: ignore
         auction_end_slot = order.auction_duration + order.slot
         current_details: AuctionAndOrderDetails = initial_details
         will_cross = initial_details.will_cross

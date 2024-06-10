@@ -5,12 +5,12 @@ from typing import Callable, Dict, Optional
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from solders.pubkey import Pubkey
+from solders.pubkey import Pubkey # type: ignore
 
 from driftpy.types import is_variant, UserAccount, Order, UserStatsAccount, ReferrerInfo
 from driftpy.drift_client import DriftClient
 from driftpy.auction_subscriber.auction_subscriber import AuctionSubscriber
-from driftpy.addresses import get_user_stats_account_public_key
+from driftpy.addresses import get_user_stats_account_public_key, get_user_account_public_key
 from driftpy.math.orders import has_auction_price
 from driftpy.math.conversion import convert_to_number
 
@@ -72,20 +72,16 @@ class BaseJitter(ABC):
         taker_key_str = str(taker_key)
 
         taker_stats_key = get_user_stats_account_public_key(
-            self.drift_client.program_id, taker.authority
+            self.drift_client.program_id, taker.authority # type: ignore
         )
 
         self.logger.info(f"Taker: {taker.authority}")
 
         for order in taker.orders:
             if not is_variant(order.status, "Open"):
-                self.logger.info("Order is closed.")
-                self.logger.info("----------------------------")
                 continue
 
             if not has_auction_price(order, slot):
-                self.logger.info("Order does not have auction price.")
-                self.logger.info("----------------------------")
                 continue
 
             if self.user_filter is not None:
@@ -114,7 +110,7 @@ class BaseJitter(ABC):
 
                 if (
                     order.base_asset_amount - order.base_asset_amount_filled
-                    <= perp_market_account.amm.min_order_size
+                    <= perp_market_account.amm.min_order_size # type: ignore
                 ):
                     self.logger.info("Order filled within min_order_size")
                     self.logger.info("----------------------------")
@@ -142,7 +138,7 @@ class BaseJitter(ABC):
 
                 if (
                     order.base_asset_amount - order.base_asset_amount_filled
-                    <= spot_market_account.min_order_size
+                    <= spot_market_account.min_order_size # type: ignore
                 ):
                     self.logger.info("Order filled within min_order_size")
                     self.logger.info("----------------------------")
@@ -181,7 +177,7 @@ class BaseJitter(ABC):
         order: Order,
         order_sig: str,
     ):
-        future = asyncio.Future()
+        future = asyncio.Future() # type: ignore
         future.set_result(None)
         return future
 
@@ -204,8 +200,12 @@ class BaseJitter(ABC):
             return None
         else:
             return ReferrerInfo(
-                taker_stats.referrer,
+                get_user_account_public_key(
+                    self.drift_client.program_id, # type: ignore
+                    taker_stats.referrer,
+                    0
+                ),
                 get_user_stats_account_public_key(
-                    self.drift_client.program_id, taker_stats.referrer
+                    self.drift_client.program_id, taker_stats.referrer # type: ignore
                 ),
             )

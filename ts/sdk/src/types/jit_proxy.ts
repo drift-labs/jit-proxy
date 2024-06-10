@@ -189,6 +189,9 @@ export type JitProxy = {
 					},
 					{
 						name: 'TryPostOnly';
+					},
+					{
+						name: 'Slide';
 					}
 				];
 			};
@@ -262,6 +265,16 @@ export type JitProxy = {
 			code: 6007;
 			name: 'UnprofitableArb';
 			msg: 'UnprofitableArb';
+		},
+		{
+			code: 6008;
+			name: 'PositionLimitBreached';
+			msg: 'PositionLimitBreached';
+		},
+		{
+			code: 6009;
+			name: 'NoFill';
+			msg: 'NoFill';
 		}
 	];
 };
@@ -458,6 +471,9 @@ export const IDL: JitProxy = {
 					{
 						name: 'TryPostOnly',
 					},
+					{
+						name: 'Slide',
+					},
 				],
 			},
 		},
@@ -530,6 +546,16 @@ export const IDL: JitProxy = {
 			code: 6007,
 			name: 'UnprofitableArb',
 			msg: 'UnprofitableArb',
+		},
+		{
+			code: 6008,
+			name: 'PositionLimitBreached',
+			msg: 'PositionLimitBreached',
+		},
+		{
+			code: 6009,
+			name: 'NoFill',
+			msg: 'NoFill',
 		},
 	],
 };

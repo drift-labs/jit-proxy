@@ -1,0 +1,30 @@
+name: Release
+on:
+  release:
+    types: [published]
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2.5.0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4.3.0
+      with:
+        python-version: '3.10.10'
+
+    - name: Install and configure Poetry
+      run: |
+        cd python
+        curl -sSL https://install.python-poetry.org | python3 -
+      env:
+        POETRY_VERSION: 1.4.2
+
+    - name: Build
+      run: poetry build
+      working-directory: python
+
+    - name: Publish
+      run: poetry publish --username=__token__ --password=${{ secrets.PYPI_TOKEN }}
+      working-directory: python
