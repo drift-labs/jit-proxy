@@ -19,7 +19,7 @@ env:
 jobs:
   verified-build:
     name: Build Verifiable Artifact
-    runs-on: ubuntu-latest
+    runs-on: ubicloud
     steps:
       - name: Checkout
         uses: actions/checkout@v3
