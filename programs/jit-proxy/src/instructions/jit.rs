@@ -279,6 +279,7 @@ pub struct JitParams {
     pub ask: i64,
     pub price_type: PriceType,
     pub post_only: Option<PostOnlyParam>,
+    pub max_ts: Option<u64>,
 }
 
 impl Default for JitParams {
@@ -291,6 +292,7 @@ impl Default for JitParams {
             ask: 0,
             price_type: PriceType::Limit,
             post_only: None,
+            max_ts: None,
         }
     }
 }
