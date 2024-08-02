@@ -867,8 +867,8 @@ dependencies = [
 
 [[package]]
 name = "drift"
-version = "2.85.1"
-source = "git+https://github.com/drift-labs/protocol-v2.git?rev=v2.85.1#90d1b1057bfed8eec273992d19260fdc65ab6850"
+version = "2.89.0"
+source = "git+https://github.com/drift-labs/protocol-v2.git?rev=v2.89.0#71227ecbe411257f0a167e78eb64b65a5f5f270e"
 dependencies = [
  "ahash 0.8.6",
  "anchor-lang",
@@ -883,6 +883,7 @@ dependencies = [
  "num-derive 0.3.3",
  "num-integer",
  "num-traits",
+ "openbook-v2-light",
  "phoenix-v1",
  "pyth-client",
  "pyth-solana-receiver-sdk",
@@ -892,6 +893,7 @@ dependencies = [
  "solana-security-txt",
  "static_assertions",
  "switchboard",
+ "switchboard-on-demand",
  "thiserror",
  "uint",
 ]
@@ -1549,6 +1551,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
+name = "openbook-v2-light"
+version = "0.1.0"
+source = "git+https://github.com/drift-labs/protocol-v2.git?rev=v2.89.0#71227ecbe411257f0a167e78eb64b65a5f5f270e"
+dependencies = [
+ "anchor-lang",
+ "borsh 0.10.3",
+ "bytemuck",
+]
+
+[[package]]
 name = "parking_lot"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1686,7 +1698,7 @@ checksum = "44de48029c54ec1ca570786b5baeb906b0fc2409c8e0145585e287ee7a526c72"
 [[package]]
 name = "pyth-solana-receiver-sdk"
 version = "0.3.0"
-source = "git+https://github.com/drift-labs/pyth-crosschain?rev=04cf2c#04cf2c01642a2ce0a0f620652034755d3e81d576"
+source = "git+https://github.com/drift-labs/pyth-crosschain?rev=3e8a24ecd0bcf22b787313e2020f4186bb22c729#3e8a24ecd0bcf22b787313e2020f4186bb22c729"
 dependencies = [
  "anchor-lang",
  "hex",
@@ -1697,7 +1709,7 @@ dependencies = [
 [[package]]
 name = "pythnet-sdk"
 version = "2.1.0"
-source = "git+https://github.com/drift-labs/pyth-crosschain?rev=04cf2c#04cf2c01642a2ce0a0f620652034755d3e81d576"
+source = "git+https://github.com/drift-labs/pyth-crosschain?rev=3e8a24ecd0bcf22b787313e2020f4186bb22c729#3e8a24ecd0bcf22b787313e2020f4186bb22c729"
 dependencies = [
  "anchor-lang",
  "bincode",
@@ -2582,9 +2594,19 @@ checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 [[package]]
 name = "switchboard"
 version = "0.1.0"
-source = "git+https://github.com/drift-labs/protocol-v2.git?rev=v2.85.1#90d1b1057bfed8eec273992d19260fdc65ab6850"
+source = "git+https://github.com/drift-labs/protocol-v2.git?rev=v2.89.0#71227ecbe411257f0a167e78eb64b65a5f5f270e"
 dependencies = [
  "anchor-lang",
+]
+
+[[package]]
+name = "switchboard-on-demand"
+version = "0.1.0"
+source = "git+https://github.com/drift-labs/protocol-v2.git?rev=v2.89.0#71227ecbe411257f0a167e78eb64b65a5f5f270e"
+dependencies = [
+ "anchor-lang",
+ "bytemuck",
+ "solana-program",
 ]
 
 [[package]]
