@@ -150,10 +150,10 @@
     bn.js "^5.1.2"
     buffer-layout "^1.2.0"
 
-"@drift-labs/sdk@2.91.0-beta.1":
-  version "2.91.0-beta.1"
-  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.91.0-beta.1.tgz#6a59511690b113bc61852a75e1ab9d77ac8a7a9c"
-  integrity sha512-/lQdS/KuBdBHOUMwjtfBXUP9wKAAQUsrYfPyd/gt1/lz+JFUsEuD4q2SIc0hFXQsd07v8Xm32R+zolU4s0txDA==
+"@drift-labs/sdk@2.91.0-beta.2":
+  version "2.91.0-beta.2"
+  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.91.0-beta.2.tgz#730da629cb8f12287b66e1102e3d03c66b9c2e35"
+  integrity sha512-4O9MIhySVjF96a4G2Y/ETyJvKM9ocZE9M8jgHLpMoISNnRx5QHaJoe+M8Wc2prBHpBDIkEO2MDd2BQdDU9Kb0g==
   dependencies:
     "@coral-xyz/anchor" "0.28.0"
     "@coral-xyz/anchor-30" "npm:@coral-xyz/anchor@0.30.1"
@@ -167,6 +167,7 @@
     "@solana/web3.js" "1.92.3"
     "@switchboard-xyz/on-demand" "1.2.1"
     anchor-bankrun "^0.3.0"
+    node-cache "^5.1.2"
     rpc-websockets "7.5.1"
     solana-bankrun "^0.3.0"
     strict-event-emitter-types "^2.0.0"
