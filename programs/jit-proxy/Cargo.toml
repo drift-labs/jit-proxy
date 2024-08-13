@@ -17,6 +17,6 @@ default = []
 anchor-lang = "0.29.0"
 anchor-spl = "0.29.0"
 bytemuck = { version = "1.4.0" }
-drift = { git = "https://github.com/drift-labs/protocol-v2.git", rev = "v2.89.0", features = ["cpi", "mainnet-beta"]}
+drift = { git = "https://github.com/drift-labs/protocol-v2.git", rev = "v2.92.0", features = ["cpi", "mainnet-beta"]}
 static_assertions = "1.1.0"
 ahash = "=0.8.6"

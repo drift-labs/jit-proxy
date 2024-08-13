@@ -66,7 +66,7 @@ pub fn jit<'c: 'info, 'info>(
         None,
     )?;
 
-    let (oracle_price, tick_size, min_order_size) = if market_type == DriftMarketType::Perp {
+    let (oracle_price, tick_size, min_order_size, is_prediction_market) = if market_type == DriftMarketType::Perp {
         let perp_market = perp_market_map.get_ref(&market_index)?;
         let oracle_price = oracle_map.get_price_data(&perp_market.amm.oracle)?.price;
 
@@ -74,6 +74,7 @@ pub fn jit<'c: 'info, 'info>(
             oracle_price,
             perp_market.amm.order_tick_size,
             perp_market.amm.min_order_size,
+            perp_market.is_prediction_market()
         )
     } else {
         let spot_market = spot_market_map.get_ref(&market_index)?;
@@ -83,11 +84,12 @@ pub fn jit<'c: 'info, 'info>(
             oracle_price,
             spot_market.order_tick_size,
             spot_market.min_order_size,
+            false,
         )
     };
 
     let taker_price =
-        match taker_order.get_limit_price(Some(oracle_price), None, slot, tick_size)? {
+        match taker_order.get_limit_price(Some(oracle_price), None, slot, tick_size, is_prediction_market)? {
             Some(price) => price,
             None if market_type == DriftMarketType::Perp => {
                 msg!("taker order didnt have price. deriving fallback");
