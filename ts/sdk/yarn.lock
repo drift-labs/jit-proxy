@@ -157,10 +157,10 @@
     bn.js "^5.1.2"
     buffer-layout "^1.2.0"
 
-"@drift-labs/sdk@2.95.0-beta.7":
-  version "2.95.0-beta.7"
-  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.95.0-beta.7.tgz#4d67427c811358f5848dfc8639b982eb9713e708"
-  integrity sha512-GazjPw3YKfCR4GsU5A5qn6nCXnGOlKYqBmRRI599oczvZmRSVQv65MhOD03HfXxCOXzoZYSfI/KoIlD6ZJbU6w==
+"@drift-labs/sdk@2.95.0-beta.8":
+  version "2.95.0-beta.8"
+  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.95.0-beta.8.tgz#5b36d0ee3b493205e91d6bd48b9846c4e6f3dc93"
+  integrity sha512-xUnTmcWW15mRTFBn3YjBhj2aiqGoRF7fv4EL67dERI0ei+xPGQhZK+9MYC2hQJVNH3QVKEsK1ZB2/JJ0rPqZEw==
   dependencies:
     "@coral-xyz/anchor" "0.28.0"
     "@coral-xyz/anchor-30" "npm:@coral-xyz/anchor@0.30.1"
