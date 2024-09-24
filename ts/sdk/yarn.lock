@@ -157,15 +157,15 @@
     bn.js "^5.1.2"
     buffer-layout "^1.2.0"
 
-"@drift-labs/sdk@2.96.0-beta.9":
-  version "2.96.0-beta.9"
-  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.96.0-beta.9.tgz#7f38549ac07ad2c8d8aa760aa25e8174689bc820"
-  integrity sha512-9573Fqdx6oA5pEEUGDg4kF52AiVxj9LPFrVbgoz/Ogf5vzFbWqlbcOVlDzVcf+jktZYlW633R6DLA027hX8klA==
+"@drift-labs/sdk@2.96.0-beta.10":
+  version "2.96.0-beta.10"
+  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.96.0-beta.10.tgz#3fcf36f884652029f482e7bf6125deeb7d0aeb0b"
+  integrity sha512-4gIVKHrwFjlR62KcKJW+quD0dRYgW+rXBlZNCojorqGg6BNrq7E9HdR9Zo9IBLkgqxtYrnFFlSEhZD3zzUYCIA==
   dependencies:
     "@coral-xyz/anchor" "0.28.0"
     "@coral-xyz/anchor-30" "npm:@coral-xyz/anchor@0.30.1"
     "@ellipsis-labs/phoenix-sdk" "^1.4.2"
-    "@openbook-dex/openbook-v2" "^0.2.10"
+    "@openbook-dex/openbook-v2" "0.2.10"
     "@project-serum/serum" "^0.13.38"
     "@pythnetwork/client" "2.5.3"
     "@pythnetwork/price-service-sdk" "^1.7.1"
@@ -313,7 +313,7 @@
   resolved "https://registry.yarnpkg.com/@noble/hashes/-/hashes-1.3.2.tgz#6f26dbc8fbc7205873ce3cee2f690eba0d421b39"
   integrity sha512-MVC8EAQp7MvEcm30KWENFjgR+Mkmf+D189XJTkFIlwohU5hcBbn1ZkKq7KVTi2Hme3PMGF390DaL52beVrIihQ==
 
-"@openbook-dex/openbook-v2@^0.2.10":
+"@openbook-dex/openbook-v2@0.2.10":
   version "0.2.10"
   resolved "https://registry.yarnpkg.com/@openbook-dex/openbook-v2/-/openbook-v2-0.2.10.tgz#a5cfcd30ce827ecd446b76429a5e41baa23a318c"
   integrity sha512-JOroVQHeia+RbghpluDJB5psUIhdhYRPLu0zWoG0h5vgDU4SjXwlcC+LJiIa2HVPasvZjWuCtlKWFyrOS75lOA==
