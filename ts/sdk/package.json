@@ -1,13 +1,13 @@
 {
   "name": "@drift-labs/jit-proxy",
-  "version": "0.10.572",
+  "version": "0.10.573",
   "scripts": {
     "clean": "rm -rf lib",
     "build": "yarn clean && tsc"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.26.0",
-    "@drift-labs/sdk": "2.96.0-beta.17",
+    "@drift-labs/sdk": "2.96.0-beta.18",
     "@solana/web3.js": "1.91.7"
   },
   "engines": {
