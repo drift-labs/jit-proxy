@@ -13,7 +13,7 @@ import {
 import { IDL, JitProxy } from './types/jit_proxy';
 import { PublicKey, TransactionInstruction } from '@solana/web3.js';
 import { Program } from '@coral-xyz/anchor';
-import { TxSigAndSlot } from '@drift-labs/sdk/lib/tx/types';
+import { TxSigAndSlot } from '@drift-labs/sdk';
 
 export type JitIxParams = {
 	takerKey: PublicKey;

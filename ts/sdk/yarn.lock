@@ -157,14 +157,15 @@
     bn.js "^5.1.2"
     buffer-layout "^1.2.0"
 
-"@drift-labs/sdk@2.97.0-beta.22":
-  version "2.97.0-beta.22"
-  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.97.0-beta.22.tgz#d6af59a189b062fbf8b49f5b5bc8d79655132b07"
-  integrity sha512-ZvZ0EL1CGO67WPQxQFxcTzWVRSfvYzD4XOageJ4LMT+U7W46jwg7+eNqSzKtwKYSyvb1RsXIFwZrquR39N7mwQ==
+"@drift-labs/sdk@2.97.0-beta.27":
+  version "2.97.0-beta.27"
+  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.97.0-beta.27.tgz#e68e833f6b00b390dd707e6f9b4619445bce9536"
+  integrity sha512-TqU/opNmTt48pmYjiOZiW3rt/X6Wbbreuds80TrPSwt3XrXBgeUhkmBZAjg+fyJIOwQGTLEm1clz0h2Iwh3Wuw==
   dependencies:
     "@coral-xyz/anchor" "0.28.0"
     "@coral-xyz/anchor-30" "npm:@coral-xyz/anchor@0.30.1"
     "@ellipsis-labs/phoenix-sdk" "^1.4.2"
+    "@grpc/grpc-js" "^1.8.0"
     "@openbook-dex/openbook-v2" "0.2.10"
     "@project-serum/serum" "^0.13.38"
     "@pythnetwork/client" "2.5.3"
@@ -173,6 +174,7 @@
     "@solana/spl-token" "0.3.7"
     "@solana/web3.js" "1.92.3"
     "@switchboard-xyz/on-demand" "1.2.42"
+    "@triton-one/yellowstone-grpc" "0.6.0"
     anchor-bankrun "^0.3.0"
     node-cache "^5.1.2"
     rpc-websockets "7.5.1"
@@ -195,6 +197,14 @@
     bn.js "^5.2.1"
     borsh "^0.7.0"
     bs58 "^5.0.0"
+
+"@grpc/grpc-js@^1.8.0":
+  version "1.12.2"
+  resolved "https://registry.yarnpkg.com/@grpc/grpc-js/-/grpc-js-1.12.2.tgz#97eda82dd49bb9c24eaf6434ea8d7de446e95aac"
+  integrity sha512-bgxdZmgTrJZX50OjyVwz3+mNEnCTNkh3cIqGPWVNeW9jX6bn1ZkU80uPd+67/ZpIJIjRQ9qaHCjhavyoWYxumg==
+  dependencies:
+    "@grpc/proto-loader" "^0.7.13"
+    "@js-sdsl/ordered-map" "^4.4.2"
 
 "@grpc/grpc-js@^1.8.13":
   version "1.10.9"
@@ -873,6 +883,13 @@
     bs58 "^5.0.0"
     js-yaml "^4.1.0"
     protobufjs "^7.2.6"
+
+"@triton-one/yellowstone-grpc@0.6.0":
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/@triton-one/yellowstone-grpc/-/yellowstone-grpc-0.6.0.tgz#9e6376cec8a42284c23dc195df2c3423c87c4f27"
+  integrity sha512-rgdZM2N3U9/d/QKOI5PP+9rSHUl2oSI5Uwzvuss8y/mtTaHFjbOMpXpQXviIeDkusOa+mef4wLYrbjEZCwTXiw==
+  dependencies:
+    "@grpc/grpc-js" "^1.8.0"
 
 "@types/bn.js@^5.1.0":
   version "5.1.5"
