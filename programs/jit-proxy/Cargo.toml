@@ -1,6 +1,6 @@
 [package]
 name = "jit-proxy"
-version = "0.10.2"
+version = "0.11.0"
 description = "Created with Anchor"
 edition = "2021"
 
