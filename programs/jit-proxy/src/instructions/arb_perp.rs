@@ -79,6 +79,7 @@ pub fn arb_perp<'c: 'info, 'info>(
     let init_margin_ratio = perp_market.get_margin_ratio(
         intermediate_base.unsigned_abs().cast()?,
         MarginRequirementType::Initial,
+        taker.is_high_leverage_mode(),
     )?;
 
     // assumes all free collateral in quote asset token
