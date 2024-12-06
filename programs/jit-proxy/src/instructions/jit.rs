@@ -66,47 +66,53 @@ pub fn jit<'c: 'info, 'info>(
         None,
     )?;
 
-    let (oracle_price, tick_size, min_order_size, is_prediction_market) = if market_type == DriftMarketType::Perp {
-        let perp_market = perp_market_map.get_ref(&market_index)?;
-        let oracle_price = oracle_map.get_price_data(&perp_market.oracle_id())?.price;
+    let (oracle_price, tick_size, min_order_size, is_prediction_market) =
+        if market_type == DriftMarketType::Perp {
+            let perp_market = perp_market_map.get_ref(&market_index)?;
+            let oracle_price = oracle_map.get_price_data(&perp_market.oracle_id())?.price;
 
-        (
-            oracle_price,
-            perp_market.amm.order_tick_size,
-            perp_market.amm.min_order_size,
-            perp_market.is_prediction_market()
-        )
-    } else {
-        let spot_market = spot_market_map.get_ref(&market_index)?;
-        let oracle_price = oracle_map.get_price_data(&spot_market.oracle_id())?.price;
+            (
+                oracle_price,
+                perp_market.amm.order_tick_size,
+                perp_market.amm.min_order_size,
+                perp_market.is_prediction_market(),
+            )
+        } else {
+            let spot_market = spot_market_map.get_ref(&market_index)?;
+            let oracle_price = oracle_map.get_price_data(&spot_market.oracle_id())?.price;
 
-        (
-            oracle_price,
-            spot_market.order_tick_size,
-            spot_market.min_order_size,
-            false,
-        )
-    };
-
-    let taker_price =
-        match taker_order.get_limit_price(Some(oracle_price), None, slot, tick_size, is_prediction_market)? {
-            Some(price) => price,
-            None if market_type == DriftMarketType::Perp => {
-                msg!("taker order didnt have price. deriving fallback");
-                // if the order doesn't have a price, drift users amm price for taker price
-                let perp_market = perp_market_map.get_ref(&market_index)?;
-                let reserve_price = perp_market.amm.reserve_price()?;
-                match taker_direction {
-                    PositionDirection::Long => perp_market.amm.ask_price(reserve_price)?,
-                    PositionDirection::Short => perp_market.amm.bid_price(reserve_price)?,
-                }
-            }
-            None => {
-                // Shouldnt be possible for spot
-                msg!("taker order didnt have price");
-                return Err(ErrorCode::TakerOrderNotFound.into());
-            }
+            (
+                oracle_price,
+                spot_market.order_tick_size,
+                spot_market.min_order_size,
+                false,
+            )
         };
+
+    let taker_price = match taker_order.get_limit_price(
+        Some(oracle_price),
+        None,
+        slot,
+        tick_size,
+        is_prediction_market,
+    )? {
+        Some(price) => price,
+        None if market_type == DriftMarketType::Perp => {
+            msg!("taker order didnt have price. deriving fallback");
+            // if the order doesn't have a price, drift users amm price for taker price
+            let perp_market = perp_market_map.get_ref(&market_index)?;
+            let reserve_price = perp_market.amm.reserve_price()?;
+            match taker_direction {
+                PositionDirection::Long => perp_market.amm.ask_price(reserve_price)?,
+                PositionDirection::Short => perp_market.amm.bid_price(reserve_price)?,
+            }
+        }
+        None => {
+            // Shouldnt be possible for spot
+            msg!("taker order didnt have price");
+            return Err(ErrorCode::TakerOrderNotFound.into());
+        }
+    };
 
     let maker_direction = taker_direction.opposite();
     let maker_worst_price = params.get_worst_price(oracle_price, taker_direction)?;
@@ -354,6 +360,33 @@ fn check_position_limits(
     }
 }
 
+fn place_and_make<'info>(
+    ctx: &Context<'_, '_, '_, 'info, Jit<'info>>,
+    taker_order_id: u32,
+    order_params: OrderParams,
+) -> Result<()> {
+    let drift_program = ctx.accounts.drift_program.to_account_info().clone();
+    let cpi_accounts = PlaceAndMake {
+        state: ctx.accounts.state.to_account_info().clone(),
+        user: ctx.accounts.user.to_account_info().clone(),
+        user_stats: ctx.accounts.user_stats.to_account_info().clone(),
+        authority: ctx.accounts.authority.to_account_info().clone(),
+        taker: ctx.accounts.taker.to_account_info().clone(),
+        taker_stats: ctx.accounts.taker_stats.to_account_info().clone(),
+    };
+
+    let cpi_context = CpiContext::new(drift_program, cpi_accounts)
+        .with_remaining_accounts(ctx.remaining_accounts.into());
+
+    if order_params.market_type == DriftMarketType::Perp {
+        drift::cpi::place_and_make_perp_order(cpi_context, order_params, taker_order_id)?;
+    } else {
+        drift::cpi::place_and_make_spot_order(cpi_context, order_params, taker_order_id, None)?;
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -412,31 +445,4 @@ mod tests {
         let result = check_position_limits(params, PositionDirection::Short, 200, -150, 0);
         assert!(result.is_err());
     }
-}
-
-fn place_and_make<'info>(
-    ctx: &Context<'_, '_, '_, 'info, Jit<'info>>,
-    taker_order_id: u32,
-    order_params: OrderParams,
-) -> Result<()> {
-    let drift_program = ctx.accounts.drift_program.to_account_info().clone();
-    let cpi_accounts = PlaceAndMake {
-        state: ctx.accounts.state.to_account_info().clone(),
-        user: ctx.accounts.user.to_account_info().clone(),
-        user_stats: ctx.accounts.user_stats.to_account_info().clone(),
-        authority: ctx.accounts.authority.to_account_info().clone(),
-        taker: ctx.accounts.taker.to_account_info().clone(),
-        taker_stats: ctx.accounts.taker_stats.to_account_info().clone(),
-    };
-
-    let cpi_context = CpiContext::new(drift_program, cpi_accounts)
-        .with_remaining_accounts(ctx.remaining_accounts.into());
-
-    if order_params.market_type == DriftMarketType::Perp {
-        drift::cpi::place_and_make_perp_order(cpi_context, order_params, taker_order_id)?;
-    } else {
-        drift::cpi::place_and_make_spot_order(cpi_context, order_params, taker_order_id, None)?;
-    }
-
-    Ok(())
 }
