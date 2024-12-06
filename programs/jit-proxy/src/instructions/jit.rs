@@ -68,7 +68,7 @@ pub fn jit<'c: 'info, 'info>(
 
     let (oracle_price, tick_size, min_order_size, is_prediction_market) = if market_type == DriftMarketType::Perp {
         let perp_market = perp_market_map.get_ref(&market_index)?;
-        let oracle_price = oracle_map.get_price_data(&perp_market.amm.oracle)?.price;
+        let oracle_price = oracle_map.get_price_data(&perp_market.oracle_id())?.price;
 
         (
             oracle_price,
@@ -78,7 +78,7 @@ pub fn jit<'c: 'info, 'info>(
         )
     } else {
         let spot_market = spot_market_map.get_ref(&market_index)?;
-        let oracle_price = oracle_map.get_price_data(&spot_market.oracle)?.price;
+        let oracle_price = oracle_map.get_price_data(&spot_market.oracle_id())?.price;
 
         (
             oracle_price,

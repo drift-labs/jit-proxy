@@ -54,7 +54,7 @@ pub fn arb_perp<'c: 'info, 'info>(
     let (makers, _) = load_user_maps(remaining_accounts_iter, true)?;
 
     let perp_market = perp_market_map.get_ref(&market_index)?;
-    let oracle_price_data = oracle_map.get_price_data(&perp_market.amm.oracle)?;
+    let oracle_price_data = oracle_map.get_price_data(&perp_market.oracle_id())?;
 
     let (bids, asks) =
         find_bids_and_asks_from_users(&perp_market, oracle_price_data, &makers, slot, now)?;

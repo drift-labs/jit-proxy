@@ -54,7 +54,7 @@ pub fn check_order_constraints<'c: 'info, 'info>(
                 Err(_) => continue,
             };
 
-            let oracle_price = oracle_map.get_price_data(&perp_market.amm.oracle)?.price;
+            let oracle_price = oracle_map.get_price_data(&perp_market.oracle_id())?.price;
 
             let settled_perp_position =
                 perp_position.simulate_settled_lp_position(&perp_market, oracle_price)?;
