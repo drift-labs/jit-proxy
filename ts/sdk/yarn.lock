@@ -128,10 +128,10 @@
     bn.js "^5.1.2"
     buffer-layout "^1.2.0"
 
-"@drift-labs/sdk@2.104.0-beta.23":
-  version "2.104.0-beta.23"
-  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.104.0-beta.23.tgz#7d20bde8079aafcfa42448aaa6f88b9de40751d4"
-  integrity sha512-1xok0cxi6v63Y6jD4i3TDJ1SH7TNbaFvdSmGylNaa8b50B04Q3oPI64jKOJoy9ECdyWt2wDkOxEvw6YusGGwJA==
+"@drift-labs/sdk@2.104.0-beta.27":
+  version "2.104.0-beta.27"
+  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.104.0-beta.27.tgz#2d018171b76599096467902f14e780b8b90ca17e"
+  integrity sha512-USZQzxjcc1iIx/TN3dEVV4/g32BcFkliilKhg5rufmGWUjbxqDjvsvQes2o5DCZMicYtEJw461wLdJdzq1GJWQ==
   dependencies:
     "@coral-xyz/anchor" "0.29.0"
     "@coral-xyz/anchor-30" "npm:@coral-xyz/anchor@0.30.1"
@@ -147,6 +147,7 @@
     "@switchboard-xyz/on-demand" "1.2.42"
     "@triton-one/yellowstone-grpc" "1.3.0"
     anchor-bankrun "0.3.0"
+    nanoid "3.3.4"
     node-cache "5.1.2"
     rpc-websockets "7.5.1"
     solana-bankrun "0.3.1"
@@ -1605,6 +1606,11 @@ ms@^2.0.0:
   version "2.1.3"
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.1.3.tgz#574c8138ce1d2b5861f0b44579dbadd60c6615b2"
   integrity sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==
+
+nanoid@3.3.4:
+  version "3.3.4"
+  resolved "https://registry.yarnpkg.com/nanoid/-/nanoid-3.3.4.tgz#730b67e3cd09e2deacf03c027c81c9d9dbc5e8ab"
+  integrity sha512-MqBkQh/OHTS2egovRtLk45wEyNXwF+cokD+1YPf9u5VfJiRdAiRwB2froX5Co9Rh20xs4siNPm8naNotSD6RBw==
 
 no-case@^3.0.4:
   version "3.0.4"
