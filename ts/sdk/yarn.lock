@@ -128,10 +128,10 @@
     bn.js "^5.1.2"
     buffer-layout "^1.2.0"
 
-"@drift-labs/sdk@2.104.0-beta.32":
-  version "2.104.0-beta.32"
-  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.104.0-beta.32.tgz#0065eb49089898fb9494ceb2728caef61c854510"
-  integrity sha512-G7XsghnJ9MugtXBo7kaOYdjToxFLPdN6+cfb8NXskfL/eMgwruoZSVuYK+Xv4Jscui+VDbWd1H/II6zBYcdjfw==
+"@drift-labs/sdk@2.104.0-beta.33":
+  version "2.104.0-beta.33"
+  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.104.0-beta.33.tgz#ea923408b7cf69efba1aefac135df966f4f44316"
+  integrity sha512-RPF9AiM6mn7/A8lBO6CqIdCOS0Wkn9nbOE7G8X0sJH5XNZZXML1EWLflKrkrQwVryBdXxmldyKVFCgGLDSkmfw==
   dependencies:
     "@coral-xyz/anchor" "0.29.0"
     "@coral-xyz/anchor-30" "npm:@coral-xyz/anchor@0.30.1"
@@ -142,7 +142,6 @@
     "@pythnetwork/client" "2.5.3"
     "@pythnetwork/price-service-sdk" "1.7.1"
     "@pythnetwork/pyth-solana-receiver" "0.7.0"
-    "@solana/buffer-layout" "4.0.1"
     "@solana/spl-token" "0.3.7"
     "@solana/web3.js" "1.92.3"
     "@switchboard-xyz/on-demand" "1.2.42"
@@ -447,7 +446,7 @@
     bigint-buffer "^1.1.5"
     bignumber.js "^9.0.1"
 
-"@solana/buffer-layout@4.0.1", "@solana/buffer-layout@^4.0.0", "@solana/buffer-layout@^4.0.1":
+"@solana/buffer-layout@^4.0.0", "@solana/buffer-layout@^4.0.1":
   version "4.0.1"
   resolved "https://registry.yarnpkg.com/@solana/buffer-layout/-/buffer-layout-4.0.1.tgz#b996235eaec15b1e0b5092a8ed6028df77fa6c15"
   integrity sha512-E1ImOIAD1tBZFRdjeM4/pzTiTApC0AOBGwyAMS4fwIodCWArzJ3DWdoh8cKxeFM2fElkxBh2Aqts1BPC373rHA==
