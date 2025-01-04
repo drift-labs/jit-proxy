@@ -13,7 +13,7 @@ python = "^3.10"
 python-dotenv = "^1.0.0"
 solana = "^0.34.0"
 anchorpy = "^0.20.1"
-driftpy = "^0.7.52"
+driftpy = ">=0.7.0"
 
 [build-system]
 requires = ["poetry-core"]
