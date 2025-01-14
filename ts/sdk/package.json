@@ -7,8 +7,9 @@
 	},
 	"dependencies": {
 		"@coral-xyz/anchor": "0.26.0",
-		"@drift-labs/sdk": "2.106.0-beta.2",
-		"@solana/web3.js": "1.91.7"
+		"@drift-labs/sdk": "2.107.0-beta.4",
+		"@solana/web3.js": "1.91.7",
+		"tweetnacl-util": "^0.15.1"
 	},
 	"engines": {
 		"node": ">=18"

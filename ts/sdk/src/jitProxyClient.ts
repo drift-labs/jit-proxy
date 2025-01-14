@@ -1,5 +1,6 @@
 import {
 	BN,
+	createMinimalEd25519VerifyIx,
 	DriftClient,
 	isVariant,
 	MakerInfo,
@@ -14,6 +15,7 @@ import { IDL, JitProxy } from './types/jit_proxy';
 import { PublicKey, TransactionInstruction } from '@solana/web3.js';
 import { Program } from '@coral-xyz/anchor';
 import { TxSigAndSlot } from '@drift-labs/sdk';
+import { SignedSwiftOrderParams } from '@drift-labs/sdk/lib/node/swift/types';
 
 export type JitIxParams = {
 	takerKey: PublicKey;
@@ -28,6 +30,13 @@ export type JitIxParams = {
 	priceType?: PriceType;
 	referrerInfo?: ReferrerInfo;
 	subAccountId?: number;
+};
+
+export type JitSwiftIxParams = JitIxParams & {
+	authorityToUse: PublicKey;
+	signedSwiftOrderParams: SignedSwiftOrderParams;
+	uuid: Uint8Array;
+	marketIndex: number;
 };
 
 export class PriceType {
@@ -63,6 +72,35 @@ export class JitProxyClient {
 	): Promise<TxSigAndSlot> {
 		const ix = await this.getJitIx(params);
 		const tx = await this.driftClient.buildTransaction([ix], txParams);
+		return await this.driftClient.sendTransaction(tx);
+	}
+
+	public async jitSwift(
+		params: JitSwiftIxParams,
+		txParams?: TxParams
+	): Promise<TxSigAndSlot> {
+		const messageLengthBuffer = Buffer.alloc(2);
+		messageLengthBuffer.writeUInt16LE(
+			params.signedSwiftOrderParams.orderParams.length
+		);
+
+		const swiftIxData = Buffer.concat([
+			params.signedSwiftOrderParams.signature,
+			params.authorityToUse.toBytes(),
+			messageLengthBuffer,
+			params.signedSwiftOrderParams.orderParams,
+		]);
+		const swiftOrderParamsSignatureIx = createMinimalEd25519VerifyIx(
+			3,
+			12,
+			swiftIxData,
+			0
+		);
+		const ix = await this.getJitSwiftIx(params);
+		const tx = await this.driftClient.buildTransaction(
+			[swiftOrderParamsSignatureIx, ix],
+			txParams
+		);
 		return await this.driftClient.sendTransaction(tx);
 	}
 
@@ -133,6 +171,68 @@ export class JitProxyClient {
 
 		return this.program.methods
 			.jit(jitParams)
+			.accounts({
+				taker: takerKey,
+				takerStats: takerStatsKey,
+				state: await this.driftClient.getStatePublicKey(),
+				user: await this.driftClient.getUserAccountPublicKey(subAccountId),
+				userStats: this.driftClient.getUserStatsAccountPublicKey(),
+				driftProgram: this.driftClient.program.programId,
+			})
+			.remainingAccounts(remainingAccounts)
+			.instruction();
+	}
+
+	public async getJitSwiftIx({
+		takerKey,
+		takerStatsKey,
+		taker,
+		maxPosition,
+		minPosition,
+		bid,
+		ask,
+		postOnly = null,
+		priceType = PriceType.LIMIT,
+		referrerInfo,
+		subAccountId,
+		uuid,
+		marketIndex,
+	}: JitSwiftIxParams): Promise<TransactionInstruction> {
+		subAccountId =
+			subAccountId !== undefined
+				? subAccountId
+				: this.driftClient.activeSubAccountId;
+		const remainingAccounts = this.driftClient.getRemainingAccounts({
+			userAccounts: [taker, this.driftClient.getUserAccount(subAccountId)],
+			writableSpotMarketIndexes: [],
+			writablePerpMarketIndexes: [marketIndex],
+		});
+
+		if (referrerInfo) {
+			remainingAccounts.push({
+				pubkey: referrerInfo.referrer,
+				isWritable: true,
+				isSigner: false,
+			});
+			remainingAccounts.push({
+				pubkey: referrerInfo.referrerStats,
+				isWritable: true,
+				isSigner: false,
+			});
+		}
+
+		const jitSwiftParams = {
+			swiftOrderUuid: Array.from(uuid),
+			maxPosition,
+			minPosition,
+			bid,
+			ask,
+			postOnly,
+			priceType,
+		};
+
+		return this.program.methods
+			.jitSwift(jitSwiftParams)
 			.accounts({
 				taker: takerKey,
 				takerStats: takerStatsKey,

@@ -6,14 +6,26 @@ import {
 	BN,
 	BulkAccountLoader,
 	DriftClient,
+	getAuctionPrice,
+	getUserAccountPublicKey,
 	getUserStatsAccountPublicKey,
 	hasAuctionPrice,
 	isVariant,
+	MarketType,
 	Order,
+	OrderTriggerCondition,
+	OrderType,
+	PositionDirection,
 	PostOnlyParams,
+	SlotSubscriber,
+	SwiftOrderParamsMessage,
+	SwiftOrderSubscriber,
 	UserAccount,
 	UserStatsMap,
+	ZERO,
 } from '@drift-labs/sdk';
+import { SignedSwiftOrderParams } from '@drift-labs/sdk/lib/node/swift/types';
+import { decodeUTF8 } from 'tweetnacl-util';
 
 export type UserFilter = (
 	userAccount: UserAccount,
@@ -33,6 +45,8 @@ export type JitParams = {
 
 export abstract class BaseJitter {
 	auctionSubscriber: AuctionSubscriber;
+	swiftOrderSubscriber: SwiftOrderSubscriber;
+	slotSubscriber: SlotSubscriber;
 	driftClient: DriftClient;
 	jitProxyClient: JitProxyClient;
 	userStatsMap: UserStatsMap;
@@ -53,11 +67,15 @@ export abstract class BaseJitter {
 		jitProxyClient,
 		driftClient,
 		userStatsMap,
+		swiftOrderSubscriber,
+		slotSubscriber,
 	}: {
 		driftClient: DriftClient;
 		auctionSubscriber: AuctionSubscriber;
 		jitProxyClient: JitProxyClient;
 		userStatsMap: UserStatsMap;
+		swiftOrderSubscriber?: SwiftOrderSubscriber;
+		slotSubscriber?: SlotSubscriber;
 	}) {
 		this.auctionSubscriber = auctionSubscriber;
 		this.driftClient = driftClient;
@@ -68,6 +86,9 @@ export abstract class BaseJitter {
 				this.driftClient,
 				new BulkAccountLoader(this.driftClient.connection, 'confirmed', 0)
 			);
+
+		this.swiftOrderSubscriber = swiftOrderSubscriber;
+		this.slotSubscriber = slotSubscriber;
 	}
 
 	async subscribe(): Promise<void> {
@@ -164,6 +185,134 @@ export abstract class BaseJitter {
 				}
 			}
 		);
+		await this.slotSubscriber?.subscribe();
+		await this.swiftOrderSubscriber?.subscribe(
+			async (orderMessageRaw, swiftOrderParamsMessage) => {
+				const swiftOrderParamsBufHex = Buffer.from(
+					orderMessageRaw['order_message']
+				);
+				const swiftOrderParamsBuf = Buffer.from(
+					orderMessageRaw['order_message'],
+					'hex'
+				);
+				const {
+					swiftOrderParams,
+					subAccountId: takerSubaccountId,
+				}: SwiftOrderParamsMessage =
+					this.driftClient.program.coder.types.decode(
+						'SwiftOrderParamsMessage',
+						swiftOrderParamsBuf
+					);
+
+				const takerAuthority = new PublicKey(
+					orderMessageRaw['taker_authority']
+				);
+				const takerUserPubkey = await getUserAccountPublicKey(
+					this.driftClient.program.programId,
+					takerAuthority,
+					takerSubaccountId
+				);
+				const takerUserPubkeyString = takerUserPubkey.toBase58();
+				const takerUserAccount = (
+					await this.swiftOrderSubscriber.userMap.mustGet(
+						takerUserPubkey.toString()
+					)
+				).getUserAccount();
+
+				const swiftOrder: Order = {
+					status: 'open',
+					orderType: OrderType.MARKET,
+					orderId: this.convertUuidToNumber(orderMessageRaw['uuid']),
+					slot: swiftOrderParamsMessage.slot,
+					marketIndex: swiftOrderParams.marketIndex,
+					marketType: MarketType.PERP,
+					baseAssetAmount: swiftOrderParams.baseAssetAmount,
+					auctionDuration: swiftOrderParams.auctionDuration!,
+					auctionStartPrice: swiftOrderParams.auctionStartPrice!,
+					auctionEndPrice: swiftOrderParams.auctionEndPrice!,
+					immediateOrCancel: true,
+					direction: swiftOrderParams.direction,
+					postOnly: false,
+					oraclePriceOffset: swiftOrderParams.oraclePriceOffset ?? 0,
+					// Rest are not required for DLOB
+					price: ZERO,
+					maxTs: ZERO,
+					triggerPrice: ZERO,
+					triggerCondition: OrderTriggerCondition.ABOVE,
+					existingPositionDirection: PositionDirection.LONG,
+					reduceOnly: false,
+					baseAssetAmountFilled: ZERO,
+					quoteAssetAmountFilled: ZERO,
+					quoteAssetAmount: ZERO,
+					userOrderId: 0,
+				};
+				swiftOrder.price = getAuctionPrice(
+					swiftOrder,
+					this.slotSubscriber.getSlot(),
+					this.driftClient.getOracleDataForPerpMarket(swiftOrder.marketIndex)
+						.price
+				);
+
+				if (this.userFilter) {
+					if (
+						this.userFilter(takerUserAccount, takerUserPubkeyString, swiftOrder)
+					) {
+						return;
+					}
+				}
+
+				const orderSignature = this.getOrderSignatures(
+					takerUserPubkeyString,
+					swiftOrder.orderId
+				);
+
+				if (this.seenOrders.has(orderSignature)) {
+					return;
+				}
+				this.seenOrders.add(orderSignature);
+
+				if (this.onGoingAuctions.has(orderSignature)) {
+					return;
+				}
+
+				if (!this.perpParams.has(swiftOrder.marketIndex)) {
+					return;
+				}
+
+				const perpMarketAccount = this.driftClient.getPerpMarketAccount(
+					swiftOrder.marketIndex
+				);
+				if (
+					swiftOrder.baseAssetAmount
+						.sub(swiftOrder.baseAssetAmountFilled)
+						.lte(perpMarketAccount.amm.minOrderSize)
+				) {
+					return;
+				}
+
+				const promise = this.createTrySwiftFill(
+					takerAuthority,
+					{
+						orderParams: swiftOrderParamsBufHex,
+						signature: Buffer.from(
+							orderMessageRaw['order_signature'],
+							'base64'
+						),
+					},
+					decodeUTF8(orderMessageRaw['uuid']),
+					takerUserAccount,
+					takerUserPubkey,
+					getUserStatsAccountPublicKey(
+						this.driftClient.program.programId,
+						takerUserAccount.authority
+					),
+					swiftOrder,
+					orderSignature,
+					orderMessageRaw['market_index']
+				).bind(this)();
+				this.onGoingAuctions.set(orderSignature, promise);
+			}
+		);
 	}
 
 	createTryFill(
@@ -176,6 +325,20 @@ export abstract class BaseJitter {
 		throw new Error('Not implemented');
 	}
 
+	createTrySwiftFill(
+		authorityToUse: PublicKey,
+		signedSwiftOrderParams: SignedSwiftOrderParams,
+		uuid: Uint8Array,
+		taker: UserAccount,
+		takerKey: PublicKey,
+		takerStatsKey: PublicKey,
+		order: Order,
+		orderSignature: string,
+		marketIndex: number
+	): () => Promise<void> {
+		throw new Error('Not implemented');
+	}
+
 	deleteOnGoingAuction(orderSignature: string): void {
 		this.onGoingAuctions.delete(orderSignature);
 		this.seenOrders.delete(orderSignature);
@@ -183,6 +346,19 @@ export abstract class BaseJitter {
 
 	getOrderSignatures(takerKey: string, orderId: number): string {
 		return `${takerKey}-${orderId}`;
+	}
+
+	private convertUuidToNumber(uuid: string): number {
+		return uuid
+			.split('')
+			.reduce(
+				(n, c) =>
+					n * 64 +
+					'_~0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'.indexOf(
+						c
+					),
+				0
+			);
 	}
 
 	public updatePerpParams(marketIndex: number, params: JitParams): void {
