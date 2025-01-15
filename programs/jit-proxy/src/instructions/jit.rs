@@ -1,7 +1,7 @@
 use anchor_lang::prelude::Pubkey;
 use anchor_lang::prelude::*;
 use drift::controller::position::PositionDirection;
-use drift::cpi::accounts::{PlaceAndMake, PlaceAndMakeSwift, PlaceSwiftTakerOrder};
+use drift::cpi::accounts::{PlaceAndMake, PlaceAndMakeSwift};
 use drift::error::DriftResult;
 use drift::instructions::optional_accounts::{load_maps, AccountMaps};
 use drift::math::casting::Cast;
@@ -111,7 +111,6 @@ pub fn jit<'c: 'info, 'info>(
 
 pub fn jit_swift<'c: 'info, 'info>(
     ctx: Context<'_, '_, 'c, 'info, JitSwift<'info>>,
-    swift_order_params_message_bytes: Vec<u8>,
     params: JitSwiftParams,
 ) -> Result<()> {
     let clock = Clock::get()?;
@@ -167,12 +166,7 @@ pub fn jit_swift<'c: 'info, 'info>(
     drop(taker);
     drop(maker);
 
-    place_and_make_swift(
-        &ctx,
-        swift_order_params_message_bytes,
-        order_params,
-        params.swift_order_uuid,
-    )?;
+    place_and_make_swift(&ctx, order_params, params.swift_order_uuid)?;
 
     let taker = ctx.accounts.taker.load()?;
 
@@ -430,6 +424,7 @@ pub struct JitSwift<'info> {
     #[account(mut)]
     pub taker_stats: AccountLoader<'info, UserStats>,
     /// CHECK: checked in SwiftUserOrdersZeroCopy checks
+    #[account(mut)]
     pub taker_swift_user_orders: AccountInfo<'info>,
     pub authority: Signer<'info>,
     pub drift_program: Program<'info, Drift>,
@@ -597,35 +592,14 @@ fn place_and_make<'info>(
 
 fn place_and_make_swift<'info>(
     ctx: &Context<'_, '_, '_, 'info, JitSwift<'info>>,
-    swift_order_params_message_bytes: Vec<u8>,
     order_params: OrderParams,
     swift_order_uuid: [u8; 8],
 ) -> Result<()> {
     let drift_program = ctx.accounts.drift_program.to_account_info();
     let state = ctx.accounts.state.to_account_info();
-    let authority = ctx.accounts.authority.to_account_info();
     let taker = ctx.accounts.taker.to_account_info();
     let taker_stats = ctx.accounts.taker_stats.to_account_info();
     let taker_swift_user_orders = ctx.accounts.taker_swift_user_orders.to_account_info();
-
-    let cpi_account_place_taker_order = PlaceSwiftTakerOrder {
-        state: state.clone(),
-        authority: authority.clone(),
-        user: taker.clone(),
-        user_stats: taker_stats.clone(),
-        swift_user_orders: taker_swift_user_orders.clone(),
-        ix_sysvar: ctx.accounts.ix_sysvar.clone(),
-    };
-
-    let cpi_context_place_taker_order =
-        CpiContext::new(drift_program.clone(), cpi_account_place_taker_order)
-            .with_remaining_accounts(ctx.remaining_accounts.into());
-    drift::cpi::place_swift_taker_order(
-        cpi_context_place_taker_order,
-        swift_order_params_message_bytes,
-    )?;
-
-    msg!("Made it past first cpi");
 
     let cpi_accounts_place_and_make = PlaceAndMakeSwift {
         state,

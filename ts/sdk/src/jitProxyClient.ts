@@ -1,6 +1,5 @@
 import {
 	BN,
-	createMinimalEd25519VerifyIx,
 	DriftClient,
 	getSwiftUserAccountPublicKey,
 	isVariant,
@@ -84,28 +83,24 @@ export class JitProxyClient {
 
 	public async jitSwift(
 		params: JitSwiftIxParams,
-		txParams?: TxParams
+		txParams?: TxParams,
+		precedingIxs?: TransactionInstruction[]
 	): Promise<TxSigAndSlot> {
-		const messageLengthBuffer = Buffer.alloc(2);
-		messageLengthBuffer.writeUInt16LE(
-			params.signedSwiftOrderParams.orderParams.length
+		const swiftTakerIxs = await this.driftClient.getPlaceSwiftTakerPerpOrderIxs(
+			params.signedSwiftOrderParams,
+			params.marketIndex,
+			{
+				taker: params.takerKey,
+				takerStats: params.takerStatsKey,
+				takerUserAccount: params.taker,
+			},
+			params.authorityToUse,
+			precedingIxs
 		);
 
-		const swiftIxData = Buffer.concat([
-			params.signedSwiftOrderParams.signature,
-			params.authorityToUse.toBytes(),
-			messageLengthBuffer,
-			params.signedSwiftOrderParams.orderParams,
-		]);
-		const swiftOrderParamsSignatureIx = createMinimalEd25519VerifyIx(
-			1,
-			12,
-			swiftIxData,
-			0
-		);
 		const ix = await this.getJitSwiftIx(params);
 		const tx = await this.driftClient.buildTransaction(
-			[swiftOrderParamsSignatureIx, ix],
+			[...swiftTakerIxs, ix],
 			txParams
 		);
 		let resp;
@@ -115,7 +110,7 @@ export class JitProxyClient {
 				recentBlockhash: (
 					await this.driftClient.connection.getLatestBlockhash()
 				).blockhash,
-				instructions: [swiftOrderParamsSignatureIx, ix],
+				instructions: [...swiftTakerIxs, ix],
 			}).compileToV0Message([this.driftClient.lookupTableAccount]);
 
 			const tx = new VersionedTransaction(message);
@@ -225,7 +220,6 @@ export class JitProxyClient {
 		subAccountId,
 		uuid,
 		marketIndex,
-		signedSwiftOrderParams,
 	}: JitSwiftIxParams): Promise<TransactionInstruction> {
 		subAccountId =
 			subAccountId !== undefined
@@ -261,7 +255,7 @@ export class JitProxyClient {
 		};
 
 		return this.program.methods
-			.jitSwift(signedSwiftOrderParams.orderParams, jitSwiftParams)
+			.jitSwift(jitSwiftParams)
 			.accounts({
 				taker: takerKey,
 				takerStats: takerStatsKey,
@@ -269,6 +263,7 @@ export class JitProxyClient {
 					this.driftClient.program.programId,
 					takerKey
 				),
+				authority: this.driftClient.wallet.payer.publicKey,
 				state: await this.driftClient.getStatePublicKey(),
 				user: await this.driftClient.getUserAccountPublicKey(subAccountId),
 				userStats: this.driftClient.getUserStatsAccountPublicKey(),

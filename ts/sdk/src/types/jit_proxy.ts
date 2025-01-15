@@ -80,7 +80,7 @@ export type JitProxy = {
 				},
 				{
 					name: 'takerSwiftUserOrders';
-					isMut: false;
+					isMut: true;
 					isSigner: false;
 				},
 				{
@@ -100,10 +100,6 @@ export type JitProxy = {
 				}
 			];
 			args: [
-				{
-					name: 'swiftOrderParamsMessageBytes';
-					type: 'bytes';
-				},
 				{
 					name: 'params';
 					type: {
@@ -472,7 +468,7 @@ export const IDL: JitProxy = {
 				},
 				{
 					name: 'takerSwiftUserOrders',
-					isMut: false,
+					isMut: true,
 					isSigner: false,
 				},
 				{
@@ -492,10 +488,6 @@ export const IDL: JitProxy = {
 				},
 			],
 			args: [
-				{
-					name: 'swiftOrderParamsMessageBytes',
-					type: 'bytes',
-				},
 				{
 					name: 'params',
 					type: {
