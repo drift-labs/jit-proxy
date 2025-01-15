@@ -92,11 +92,6 @@ export type JitProxy = {
 					name: 'driftProgram';
 					isMut: false;
 					isSigner: false;
-				},
-				{
-					name: 'ixSysvar';
-					isMut: false;
-					isSigner: false;
 				}
 			];
 			args: [
@@ -478,11 +473,6 @@ export const IDL: JitProxy = {
 				},
 				{
 					name: 'driftProgram',
-					isMut: false,
-					isSigner: false,
-				},
-				{
-					name: 'ixSysvar',
 					isMut: false,
 					isSigner: false,
 				},

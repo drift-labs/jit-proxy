@@ -8,7 +8,7 @@ use drift::math::casting::Cast;
 use drift::math::safe_math::SafeMath;
 use drift::program::Drift;
 use drift::state::order_params::OrderParams;
-use drift::state::perp_market_map::{get_writable_perp_market_set, PerpMarketMap};
+use drift::state::perp_market_map::PerpMarketMap;
 use drift::state::spot_market_map::SpotMarketMap;
 use drift::state::state::State;
 use drift::state::swift_user::SwiftUserOrdersLoader;
@@ -135,7 +135,7 @@ pub fn jit_swift<'c: 'info, 'info>(
         mut oracle_map,
     } = load_maps(
         remaining_accounts_iter,
-        &get_writable_perp_market_set(taker_order.market_index),
+        &BTreeSet::new(),
         &BTreeSet::new(),
         slot,
         None,
