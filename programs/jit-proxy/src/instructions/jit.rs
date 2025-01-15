@@ -601,42 +601,41 @@ fn place_and_make_swift<'info>(
     order_params: OrderParams,
     swift_order_uuid: [u8; 8],
 ) -> Result<()> {
-    let drift_program = ctx.accounts.drift_program.to_account_info().clone();
+    let drift_program = ctx.accounts.drift_program.to_account_info();
+    let state = ctx.accounts.state.to_account_info();
+    let authority = ctx.accounts.authority.to_account_info();
+    let taker = ctx.accounts.taker.to_account_info();
+    let taker_stats = ctx.accounts.taker_stats.to_account_info();
+    let taker_swift_user_orders = ctx.accounts.taker_swift_user_orders.to_account_info();
 
     let cpi_account_place_taker_order = PlaceSwiftTakerOrder {
-        state: ctx.accounts.state.to_account_info().clone(),
-        authority: ctx.accounts.authority.to_account_info().clone(),
-        user: ctx.accounts.taker.to_account_info().clone(),
-        user_stats: ctx.accounts.taker_stats.to_account_info().clone(),
-        swift_user_orders: ctx
-            .accounts
-            .taker_swift_user_orders
-            .to_account_info()
-            .clone(),
+        state: state.clone(),
+        authority: authority.clone(),
+        user: taker.clone(),
+        user_stats: taker_stats.clone(),
+        swift_user_orders: taker_swift_user_orders.clone(),
         ix_sysvar: ctx.accounts.ix_sysvar.clone(),
-    };
-
-    let cpi_accounts_place_and_make = PlaceAndMakeSwift {
-        state: ctx.accounts.state.to_account_info().clone(),
-        user: ctx.accounts.user.to_account_info().clone(),
-        user_stats: ctx.accounts.user_stats.to_account_info().clone(),
-        authority: ctx.accounts.authority.to_account_info().clone(),
-        taker: ctx.accounts.taker.to_account_info().clone(),
-        taker_stats: ctx.accounts.taker_stats.to_account_info().clone(),
-        taker_swift_user_orders: ctx
-            .accounts
-            .taker_swift_user_orders
-            .to_account_info()
-            .clone(),
     };
 
     let cpi_context_place_taker_order =
         CpiContext::new(drift_program.clone(), cpi_account_place_taker_order)
-            .with_remaining_accounts(ctx.remaining_accounts.iter().skip(1).cloned().collect());
+            .with_remaining_accounts(ctx.remaining_accounts.into());
     drift::cpi::place_swift_taker_order(
         cpi_context_place_taker_order,
         swift_order_params_message_bytes,
     )?;
+
+    msg!("Made it past first cpi");
+
+    let cpi_accounts_place_and_make = PlaceAndMakeSwift {
+        state,
+        user: ctx.accounts.user.to_account_info().clone(),
+        user_stats: ctx.accounts.user_stats.to_account_info().clone(),
+        authority: ctx.accounts.authority.to_account_info().clone(),
+        taker,
+        taker_stats,
+        taker_swift_user_orders,
+    };
 
     let cpi_context_place_and_make = CpiContext::new(drift_program, cpi_accounts_place_and_make)
         .with_remaining_accounts(ctx.remaining_accounts.into());

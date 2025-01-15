@@ -92,9 +92,18 @@ export type JitProxy = {
 					name: 'driftProgram';
 					isMut: false;
 					isSigner: false;
+				},
+				{
+					name: 'ixSysvar';
+					isMut: false;
+					isSigner: false;
 				}
 			];
 			args: [
+				{
+					name: 'swiftOrderParamsMessageBytes';
+					type: 'bytes';
+				},
 				{
 					name: 'params';
 					type: {
@@ -476,8 +485,17 @@ export const IDL: JitProxy = {
 					isMut: false,
 					isSigner: false,
 				},
+				{
+					name: 'ixSysvar',
+					isMut: false,
+					isSigner: false,
+				},
 			],
 			args: [
+				{
+					name: 'swiftOrderParamsMessageBytes',
+					type: 'bytes',
+				},
 				{
 					name: 'params',
 					type: {

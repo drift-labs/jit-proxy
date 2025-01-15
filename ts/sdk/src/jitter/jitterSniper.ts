@@ -58,6 +58,7 @@ export class JitterSniper extends BaseJitter {
 			driftClient,
 			userStatsMap,
 			swiftOrderSubscriber,
+			slotSubscriber,
 		});
 		this.slotSubscriber = slotSubscriber;
 	}

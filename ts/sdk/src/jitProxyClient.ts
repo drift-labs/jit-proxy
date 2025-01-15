@@ -2,6 +2,7 @@ import {
 	BN,
 	createMinimalEd25519VerifyIx,
 	DriftClient,
+	getSwiftUserAccountPublicKey,
 	isVariant,
 	MakerInfo,
 	MarketType,
@@ -12,7 +13,13 @@ import {
 	UserAccount,
 } from '@drift-labs/sdk';
 import { IDL, JitProxy } from './types/jit_proxy';
-import { PublicKey, TransactionInstruction } from '@solana/web3.js';
+import {
+	PublicKey,
+	SYSVAR_INSTRUCTIONS_PUBKEY,
+	TransactionInstruction,
+	TransactionMessage,
+	VersionedTransaction,
+} from '@solana/web3.js';
 import { Program } from '@coral-xyz/anchor';
 import { TxSigAndSlot } from '@drift-labs/sdk';
 import { SignedSwiftOrderParams } from '@drift-labs/sdk/lib/node/swift/types';
@@ -91,7 +98,7 @@ export class JitProxyClient {
 			params.signedSwiftOrderParams.orderParams,
 		]);
 		const swiftOrderParamsSignatureIx = createMinimalEd25519VerifyIx(
-			3,
+			1,
 			12,
 			swiftIxData,
 			0
@@ -101,6 +108,27 @@ export class JitProxyClient {
 			[swiftOrderParamsSignatureIx, ix],
 			txParams
 		);
+		let resp;
+		try {
+			const message = new TransactionMessage({
+				payerKey: this.driftClient.wallet.payer.publicKey,
+				recentBlockhash: (
+					await this.driftClient.connection.getLatestBlockhash()
+				).blockhash,
+				instructions: [swiftOrderParamsSignatureIx, ix],
+			}).compileToV0Message([this.driftClient.lookupTableAccount]);
+
+			const tx = new VersionedTransaction(message);
+			resp = await this.driftClient.connection.simulateTransaction(tx, {
+				sigVerify: false,
+				replaceRecentBlockhash: true,
+				commitment: 'processed',
+			});
+			console.log(resp);
+		} catch (e) {
+			console.error(e);
+		}
+
 		return await this.driftClient.sendTransaction(tx);
 	}
 
@@ -197,6 +225,7 @@ export class JitProxyClient {
 		subAccountId,
 		uuid,
 		marketIndex,
+		signedSwiftOrderParams,
 	}: JitSwiftIxParams): Promise<TransactionInstruction> {
 		subAccountId =
 			subAccountId !== undefined
@@ -232,14 +261,19 @@ export class JitProxyClient {
 		};
 
 		return this.program.methods
-			.jitSwift(jitSwiftParams)
+			.jitSwift(signedSwiftOrderParams.orderParams, jitSwiftParams)
 			.accounts({
 				taker: takerKey,
 				takerStats: takerStatsKey,
+				takerSwiftUserOrders: getSwiftUserAccountPublicKey(
+					this.driftClient.program.programId,
+					takerKey
+				),
 				state: await this.driftClient.getStatePublicKey(),
 				user: await this.driftClient.getUserAccountPublicKey(subAccountId),
 				userStats: this.driftClient.getUserStatsAccountPublicKey(),
 				driftProgram: this.driftClient.program.programId,
+				ixSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
 			})
 			.remainingAccounts(remainingAccounts)
 			.instruction();

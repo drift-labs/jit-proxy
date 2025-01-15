@@ -5,6 +5,7 @@ import {
 	DriftClient,
 	Order,
 	PostOnlyParams,
+	SlotSubscriber,
 	SwiftOrderSubscriber,
 	UserAccount,
 	UserStatsMap,
@@ -19,12 +20,14 @@ export class JitterShotgun extends BaseJitter {
 		driftClient,
 		userStatsMap,
 		swiftOrderSubscriber,
+		slotSubscriber,
 	}: {
 		driftClient: DriftClient;
 		auctionSubscriber: AuctionSubscriber;
 		jitProxyClient: JitProxyClient;
 		userStatsMap?: UserStatsMap;
 		swiftOrderSubscriber?: SwiftOrderSubscriber;
+		slotSubscriber?: SlotSubscriber;
 	}) {
 		super({
 			auctionSubscriber,
@@ -32,6 +35,7 @@ export class JitterShotgun extends BaseJitter {
 			driftClient,
 			userStatsMap,
 			swiftOrderSubscriber,
+			slotSubscriber,
 		});
 	}
 
@@ -174,6 +178,7 @@ export class JitterShotgun extends BaseJitter {
 					return;
 				} catch (e) {
 					console.error(`Failed to fill ${orderSignature}`);
+					console.log(e);
 					if (e.message.includes('0x1770') || e.message.includes('0x1771')) {
 						console.log('Order does not cross params yet, retrying');
 					} else if (e.message.includes('0x1779')) {

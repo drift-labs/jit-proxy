@@ -86,9 +86,8 @@ export abstract class BaseJitter {
 				this.driftClient,
 				new BulkAccountLoader(this.driftClient.connection, 'confirmed', 0)
 			);
-
-		this.swiftOrderSubscriber = swiftOrderSubscriber;
 		this.slotSubscriber = slotSubscriber;
+		this.swiftOrderSubscriber = swiftOrderSubscriber;
 	}
 
 	async subscribe(): Promise<void> {
@@ -248,7 +247,7 @@ export abstract class BaseJitter {
 				};
 				swiftOrder.price = getAuctionPrice(
 					swiftOrder,
-					this.slotSubscriber.getSlot(),
+					this.slotSubscriber?.getSlot(),
 					this.driftClient.getOracleDataForPerpMarket(swiftOrder.marketIndex)
 						.price
 				);
@@ -282,11 +281,7 @@ export abstract class BaseJitter {
 				const perpMarketAccount = this.driftClient.getPerpMarketAccount(
 					swiftOrder.marketIndex
 				);
-				if (
-					swiftOrder.baseAssetAmount
-						.sub(swiftOrder.baseAssetAmountFilled)
-						.lte(perpMarketAccount.amm.minOrderSize)
-				) {
+				if (swiftOrder.baseAssetAmount.lt(perpMarketAccount.amm.minOrderSize)) {
 					return;
 				}
 
