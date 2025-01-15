@@ -19,6 +19,13 @@ pub mod jit_proxy {
         instructions::jit(ctx, params)
     }
 
+    pub fn jit_swift<'c: 'info, 'info>(
+        ctx: Context<'_, '_, 'c, 'info, JitSwift<'info>>,
+        params: JitSwiftParams,
+    ) -> Result<()> {
+        instructions::jit_swift(ctx, params)
+    }
+
     pub fn check_order_constraints<'c: 'info, 'info>(
         ctx: Context<'_, '_, 'c, 'info, CheckOrderConstraints<'info>>,
         constraints: Vec<OrderConstraint>,

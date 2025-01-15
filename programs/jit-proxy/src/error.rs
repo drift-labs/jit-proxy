@@ -23,4 +23,6 @@ pub enum ErrorCode {
     PositionLimitBreached,
     #[msg("NoFill")]
     NoFill,
+    #[msg("SwiftOrderDoesNotExist")]
+    SwiftOrderDoesNotExist,
 }

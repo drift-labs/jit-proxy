@@ -14,11 +14,13 @@ import {
 	PostOnlyParams,
 	PRICE_PRECISION,
 	SlotSubscriber,
+	SwiftOrderSubscriber,
 	UserAccount,
 	UserStatsMap,
 	ZERO,
 } from '@drift-labs/sdk';
 import { BaseJitter } from './baseJitter';
+import { SignedSwiftOrderParams } from '@drift-labs/sdk/lib/node/swift/types';
 
 type AuctionAndOrderDetails = {
 	slotsTilCross: number;
@@ -41,18 +43,22 @@ export class JitterSniper extends BaseJitter {
 		jitProxyClient,
 		driftClient,
 		userStatsMap,
+		swiftOrderSubscriber,
 	}: {
 		driftClient: DriftClient;
 		slotSubscriber: SlotSubscriber;
 		auctionSubscriber: AuctionSubscriber;
 		jitProxyClient: JitProxyClient;
 		userStatsMap?: UserStatsMap;
+		swiftOrderSubscriber?: SwiftOrderSubscriber;
 	}) {
 		super({
 			auctionSubscriber,
 			jitProxyClient,
 			driftClient,
 			userStatsMap,
+			swiftOrderSubscriber,
+			slotSubscriber,
 		});
 		this.slotSubscriber = slotSubscriber;
 	}
@@ -209,6 +215,196 @@ export class JitterSniper extends BaseJitter {
 								priceType: params.priceType,
 								referrerInfo,
 								subAccountId: params.subAccountId,
+							},
+							txParams
+						);
+
+						console.log(`Filled ${orderSignature} txSig ${txSig}`);
+						await sleep(3000);
+						this.deleteOnGoingAuction(orderSignature);
+						return;
+					} catch (e) {
+						console.error(`Failed to fill ${orderSignature}`);
+						if (e.message.includes('0x1770') || e.message.includes('0x1771')) {
+							console.log('Order does not cross params yet');
+						} else if (e.message.includes('0x1779')) {
+							console.log('Order could not fill');
+						} else if (e.message.includes('0x1793')) {
+							console.log('Oracle invalid');
+						} else {
+							await sleep(3000);
+							this.deleteOnGoingAuction(orderSignature);
+							return;
+						}
+					}
+					await sleep(200);
+					i++;
+				}
+			});
+			this.deleteOnGoingAuction(orderSignature);
+		};
+	}
+
+	createTrySwiftFill(
+		authorityToUse: PublicKey,
+		signedSwiftOrderParams: SignedSwiftOrderParams,
+		uuid: Uint8Array,
+		taker: UserAccount,
+		takerKey: PublicKey,
+		takerStatsKey: PublicKey,
+		order: Order,
+		orderSignature: string,
+		marketIndex: number
+	): () => Promise<void> {
+		return async () => {
+			const params = this.perpParams.get(order.marketIndex);
+			if (!params) {
+				this.deleteOnGoingAuction(orderSignature);
+				return;
+			}
+
+			const takerStats = await this.userStatsMap.mustGet(
+				taker.authority.toString()
+			);
+			const referrerInfo = takerStats.getReferrerInfo();
+
+			const {
+				slotsTilCross,
+				willCross,
+				bid,
+				ask,
+				auctionStartPrice,
+				auctionEndPrice,
+				stepSize,
+				oraclePrice,
+			} = this.getAuctionAndOrderDetails(order);
+
+			// don't increase risk if we're past max positions
+			if (isVariant(order.marketType, 'perp')) {
+				const currPerpPos =
+					this.driftClient.getUser().getPerpPosition(order.marketIndex) ||
+					this.driftClient.getUser().getEmptyPosition(order.marketIndex);
+				if (
+					currPerpPos.baseAssetAmount.lt(ZERO) &&
+					isVariant(order.direction, 'short')
+				) {
+					if (currPerpPos.baseAssetAmount.lte(params.minPosition)) {
+						console.log(
+							`Order would increase existing short (mkt ${getVariant(
+								order.marketType
+							)}-${order.marketIndex}) too much`
+						);
+						this.deleteOnGoingAuction(orderSignature);
+						return;
+					}
+				} else if (
+					currPerpPos.baseAssetAmount.gt(ZERO) &&
+					isVariant(order.direction, 'long')
+				) {
+					if (currPerpPos.baseAssetAmount.gte(params.maxPosition)) {
+						console.log(
+							`Order would increase existing long (mkt ${getVariant(
+								order.marketType
+							)}-${order.marketIndex}) too much`
+						);
+						this.deleteOnGoingAuction(orderSignature);
+						return;
+					}
+				}
+			}
+
+			console.log(`
+				Taker wants to ${JSON.stringify(
+					order.direction
+				)}, order slot is ${order.slot.toNumber()},
+				My market: ${bid}@${ask},
+				Auction: ${auctionStartPrice} -> ${auctionEndPrice}, step size ${stepSize}
+				Current slot: ${
+					this.slotSubscriber.currentSlot
+				}, Order slot: ${order.slot.toNumber()},
+				Will cross?: ${willCross}
+				Slots to wait: ${slotsTilCross}. Target slot = ${
+				order.slot.toNumber() + slotsTilCross
+			}
+			`);
+
+			this.waitForSlotOrCrossOrExpiry(
+				willCross
+					? order.slot.toNumber() + slotsTilCross
+					: order.slot.toNumber() + order.auctionDuration + 1,
+				order,
+				{
+					slotsTilCross,
+					willCross,
+					bid,
+					ask,
+					auctionStartPrice,
+					auctionEndPrice,
+					stepSize,
+					oraclePrice,
+				}
+			).then(async ({ slot, updatedDetails }) => {
+				if (slot === -1) {
+					console.log('Auction expired without crossing');
+					this.deleteOnGoingAuction(orderSignature);
+					return;
+				}
+
+				const params = isVariant(order.marketType, 'perp')
+					? this.perpParams.get(order.marketIndex)
+					: this.spotParams.get(order.marketIndex);
+				const bid = isVariant(params.priceType, 'oracle')
+					? convertToNumber(oraclePrice.price.add(params.bid), PRICE_PRECISION)
+					: convertToNumber(params.bid, PRICE_PRECISION);
+				const ask = isVariant(params.priceType, 'oracle')
+					? convertToNumber(oraclePrice.price.add(params.ask), PRICE_PRECISION)
+					: convertToNumber(params.ask, PRICE_PRECISION);
+				const auctionPrice = convertToNumber(
+					getAuctionPrice(order, slot, updatedDetails.oraclePrice.price),
+					PRICE_PRECISION
+				);
+				console.log(`
+					Expected auction price: ${auctionStartPrice + slotsTilCross * stepSize}
+					Actual auction price: ${auctionPrice}
+					-----------------
+					Looking for slot ${order.slot.toNumber() + slotsTilCross}
+					Got slot ${slot}
+				`);
+
+				console.log(`Trying to fill ${orderSignature} with:
+					market: ${bid}@${ask}
+					auction price: ${auctionPrice}
+					submitting" ${convertToNumber(params.bid, PRICE_PRECISION)}@${convertToNumber(
+					params.ask,
+					PRICE_PRECISION
+				)}
+				`);
+				let i = 0;
+				while (i < 10) {
+					try {
+						const txParams = {
+							computeUnits: this.computeUnits,
+							computeUnitsPrice: this.computeUnitsPrice,
+						};
+						const { txSig } = await this.jitProxyClient.jitSwift(
+							{
+								takerKey,
+								takerStatsKey,
+								taker,
+								takerOrderId: order.orderId,
+								maxPosition: params.maxPosition,
+								minPosition: params.minPosition,
+								bid: params.bid,
+								ask: params.ask,
+								postOnly:
+									params.postOnlyParams ?? PostOnlyParams.MUST_POST_ONLY,
+								priceType: params.priceType,
+								referrerInfo,
+								subAccountId: params.subAccountId,
+								authorityToUse,
+								signedSwiftOrderParams,
+								uuid,
+								marketIndex,
 							},
 							txParams
 						);
