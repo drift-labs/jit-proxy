@@ -88,6 +88,10 @@ export abstract class BaseJitter {
 			);
 		this.slotSubscriber = slotSubscriber;
 		this.swiftOrderSubscriber = swiftOrderSubscriber;
+
+		if (this.swiftOrderSubscriber && !this.slotSubscriber) {
+			throw new Error('Slot subscriber is required for swift order subscriber');
+		}
 	}
 
 	async subscribe(): Promise<void> {
