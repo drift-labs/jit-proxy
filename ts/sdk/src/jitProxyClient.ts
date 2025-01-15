@@ -12,11 +12,7 @@ import {
 	UserAccount,
 } from '@drift-labs/sdk';
 import { IDL, JitProxy } from './types/jit_proxy';
-import {
-	PublicKey,
-	SYSVAR_INSTRUCTIONS_PUBKEY,
-	TransactionInstruction,
-} from '@solana/web3.js';
+import { PublicKey, TransactionInstruction } from '@solana/web3.js';
 import { Program } from '@coral-xyz/anchor';
 import { TxSigAndSlot } from '@drift-labs/sdk';
 import { SignedSwiftOrderParams } from '@drift-labs/sdk/lib/node/swift/types';
@@ -245,7 +241,6 @@ export class JitProxyClient {
 				user: await this.driftClient.getUserAccountPublicKey(subAccountId),
 				userStats: this.driftClient.getUserStatsAccountPublicKey(),
 				driftProgram: this.driftClient.program.programId,
-				ixSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
 			})
 			.remainingAccounts(remainingAccounts)
 			.instruction();

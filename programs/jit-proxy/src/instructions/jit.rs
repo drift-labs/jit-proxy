@@ -8,14 +8,13 @@ use drift::math::casting::Cast;
 use drift::math::safe_math::SafeMath;
 use drift::program::Drift;
 use drift::state::order_params::OrderParams;
-use drift::state::perp_market_map::PerpMarketMap;
+use drift::state::perp_market_map::{get_writable_perp_market_set, PerpMarketMap};
 use drift::state::spot_market_map::SpotMarketMap;
 use drift::state::state::State;
 use drift::state::swift_user::SwiftUserOrdersLoader;
 use drift::state::user::Order;
 use drift::state::user::{MarketType as DriftMarketType, OrderTriggerCondition, OrderType};
 use drift::state::user::{User, UserStats};
-use solana_program::sysvar::instructions::ID as IX_ID;
 use std::collections::BTreeSet;
 
 use crate::error::ErrorCode;
@@ -119,19 +118,6 @@ pub fn jit_swift<'c: 'info, 'info>(
     let taker = ctx.accounts.taker.load()?;
     let maker = ctx.accounts.user.load()?;
 
-    let remaining_accounts_iter = &mut ctx.remaining_accounts.iter().peekable();
-    let AccountMaps {
-        perp_market_map,
-        spot_market_map,
-        mut oracle_map,
-    } = load_maps(
-        remaining_accounts_iter,
-        &BTreeSet::new(),
-        &BTreeSet::new(),
-        slot,
-        None,
-    )?;
-
     let taker_swift_account = ctx.accounts.taker_swift_user_orders.load()?;
     let taker_order_id = taker_swift_account
         .iter()
@@ -141,6 +127,19 @@ pub fn jit_swift<'c: 'info, 'info>(
     let taker_order = taker
         .get_order(taker_order_id)
         .ok_or(ErrorCode::TakerOrderNotFound)?;
+
+    let remaining_accounts_iter = &mut ctx.remaining_accounts.iter().peekable();
+    let AccountMaps {
+        perp_market_map,
+        spot_market_map,
+        mut oracle_map,
+    } = load_maps(
+        remaining_accounts_iter,
+        &get_writable_perp_market_set(taker_order.market_index),
+        &BTreeSet::new(),
+        slot,
+        None,
+    )?;
 
     let oracle_price = oracle_map
         .get_price_data(
@@ -200,6 +199,7 @@ pub fn jit_swift<'c: 'info, 'info>(
     Ok(())
 }
 
+#[inline(always)]
 fn process_order(
     maker: &User,
     perp_market_map: &PerpMarketMap,
@@ -428,12 +428,6 @@ pub struct JitSwift<'info> {
     pub taker_swift_user_orders: AccountInfo<'info>,
     pub authority: Signer<'info>,
     pub drift_program: Program<'info, Drift>,
-    /// CHECK: The address check is needed because otherwise
-    /// the supplied Sysvar could be anything else.
-    /// The Instruction Sysvar has not been implemented
-    /// in the Anchor framework yet, so this is the safe approach.
-    #[account(address = IX_ID)]
-    pub ix_sysvar: AccountInfo<'info>,
 }
 
 #[derive(Debug, Clone, Copy, AnchorSerialize, AnchorDeserialize, PartialEq, Eq)]
