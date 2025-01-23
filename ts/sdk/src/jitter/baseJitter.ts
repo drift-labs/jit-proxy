@@ -13,6 +13,7 @@ import {
 	isVariant,
 	MarketType,
 	Order,
+	OrderStatus,
 	OrderTriggerCondition,
 	OrderType,
 	PositionDirection,
@@ -202,10 +203,7 @@ export abstract class BaseJitter {
 					swiftOrderParams,
 					subAccountId: takerSubaccountId,
 				}: SwiftOrderParamsMessage =
-					this.driftClient.program.coder.types.decode(
-						'SwiftOrderParamsMessage',
-						swiftOrderParamsBuf
-					);
+					this.driftClient.decodeSwiftOrderParamsMessage(swiftOrderParamsBuf);
 
 				const takerAuthority = new PublicKey(
 					orderMessageRaw['taker_authority']
@@ -222,9 +220,12 @@ export abstract class BaseJitter {
 					)
 				).getUserAccount();
 
+				console.log(swiftOrderParams.orderType);
+				console.log(swiftOrderParams.immediateOrCancel);
+
 				const swiftOrder: Order = {
-					status: 'open',
-					orderType: OrderType.MARKET,
+					status: OrderStatus.OPEN,
+					orderType: swiftOrderParams.orderType,
 					orderId: this.convertUuidToNumber(orderMessageRaw['uuid']),
 					slot: swiftOrderParamsMessage.slot,
 					marketIndex: swiftOrderParams.marketIndex,
@@ -233,17 +234,17 @@ export abstract class BaseJitter {
 					auctionDuration: swiftOrderParams.auctionDuration!,
 					auctionStartPrice: swiftOrderParams.auctionStartPrice!,
 					auctionEndPrice: swiftOrderParams.auctionEndPrice!,
-					immediateOrCancel: true,
+					immediateOrCancel: swiftOrderParams.immediateOrCancel,
 					direction: swiftOrderParams.direction,
 					postOnly: false,
 					oraclePriceOffset: swiftOrderParams.oraclePriceOffset ?? 0,
-					// Rest are not required for DLOB
+					maxTs: swiftOrderParams.maxTs ?? ZERO,
+					reduceOnly: swiftOrderParams.reduceOnly,
+					triggerCondition: swiftOrderParams.triggerCondition,
+					// Rest are not necessary and set for type conforming
 					price: ZERO,
-					maxTs: ZERO,
-					triggerPrice: ZERO,
-					triggerCondition: OrderTriggerCondition.ABOVE,
 					existingPositionDirection: PositionDirection.LONG,
-					reduceOnly: false,
+					triggerPrice: ZERO,
 					baseAssetAmountFilled: ZERO,
 					quoteAssetAmountFilled: ZERO,
 					quoteAssetAmount: ZERO,
