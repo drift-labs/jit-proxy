@@ -220,9 +220,6 @@ export abstract class BaseJitter {
 					)
 				).getUserAccount();
 
-				console.log(swiftOrderParams.orderType);
-				console.log(swiftOrderParams.immediateOrCancel);
-
 				const swiftOrder: Order = {
 					status: OrderStatus.OPEN,
 					orderType: swiftOrderParams.orderType,
