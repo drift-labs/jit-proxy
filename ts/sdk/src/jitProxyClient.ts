@@ -234,7 +234,7 @@ export class JitProxyClient {
 				takerStats: takerStatsKey,
 				takerSwiftUserOrders: getSwiftUserAccountPublicKey(
 					this.driftClient.program.programId,
-					taker.authority,
+					taker.authority
 				),
 				authority: this.driftClient.wallet.payer.publicKey,
 				state: await this.driftClient.getStatePublicKey(),
