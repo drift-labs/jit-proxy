@@ -1,19 +1,25 @@
+use anchor_lang::prelude::Pubkey;
 use anchor_lang::prelude::*;
 use drift::controller::position::PositionDirection;
-use drift::cpi::accounts::PlaceAndMake;
+use drift::cpi::accounts::{PlaceAndMake, PlaceAndMakeSwift};
 use drift::error::DriftResult;
 use drift::instructions::optional_accounts::{load_maps, AccountMaps};
 use drift::math::casting::Cast;
 use drift::math::safe_math::SafeMath;
 use drift::program::Drift;
 use drift::state::order_params::OrderParams;
+use drift::state::perp_market_map::PerpMarketMap;
+use drift::state::spot_market_map::SpotMarketMap;
 use drift::state::state::State;
+use drift::state::swift_user::SwiftUserOrdersLoader;
+use drift::state::user::Order;
 use drift::state::user::{MarketType as DriftMarketType, OrderTriggerCondition, OrderType};
 use drift::state::user::{User, UserStats};
 use std::collections::BTreeSet;
 
 use crate::error::ErrorCode;
-use crate::state::{PostOnlyParam, PriceType};
+use crate::state::PriceType;
+use drift::state::order_params::PostOnlyParam;
 
 pub fn jit<'c: 'info, 'info>(
     ctx: Context<'_, '_, 'c, 'info, Jit<'info>>,
@@ -25,9 +31,187 @@ pub fn jit<'c: 'info, 'info>(
     let taker = ctx.accounts.taker.load()?;
     let maker = ctx.accounts.user.load()?;
 
+    let remaining_accounts_iter = &mut ctx.remaining_accounts.iter().peekable();
+    let AccountMaps {
+        perp_market_map,
+        spot_market_map,
+        mut oracle_map,
+    } = load_maps(
+        remaining_accounts_iter,
+        &BTreeSet::new(),
+        &BTreeSet::new(),
+        slot,
+        None,
+    )?;
+
     let taker_order = taker
         .get_order(params.taker_order_id)
         .ok_or(ErrorCode::TakerOrderNotFound)?;
+    let market_type = taker_order.market_type;
+    let market_index = taker_order.market_index;
+
+    let oracle_price = if taker_order.market_type == DriftMarketType::Perp {
+        let perp_market = perp_market_map.get_ref(&taker_order.market_index)?;
+        oracle_map.get_price_data(&perp_market.oracle_id())?.price
+    } else {
+        let spot_market = spot_market_map.get_ref(&taker_order.market_index)?;
+        oracle_map.get_price_data(&spot_market.oracle_id())?.price
+    };
+
+    let (order_params, taker_base_asset_amount_unfilled, taker_price, maker_price) = process_order(
+        &maker,
+        &perp_market_map,
+        &spot_market_map,
+        taker_order,
+        slot,
+        params.max_position,
+        params.min_position,
+        oracle_price,
+        params.get_worst_price(oracle_price, taker_order.direction)?,
+        params.post_only.unwrap_or(PostOnlyParam::MustPostOnly),
+    )?;
+
+    drop(taker);
+    drop(maker);
+
+    place_and_make(&ctx, params.taker_order_id, order_params)?;
+
+    let taker = ctx.accounts.taker.load()?;
+
+    let taker_base_asset_amount_unfilled_after = match taker.get_order(params.taker_order_id) {
+        Some(order) => order.get_base_asset_amount_unfilled(None)?,
+        None => 0,
+    };
+
+    if taker_base_asset_amount_unfilled_after == taker_base_asset_amount_unfilled {
+        // taker order failed to fill
+        msg!(
+            "taker price = {} maker price = {} oracle price = {}",
+            taker_price,
+            maker_price,
+            oracle_price
+        );
+        msg!("jit params {:?}", params);
+        if market_type == DriftMarketType::Perp {
+            let perp_market = perp_market_map.get_ref(&market_index)?;
+            let reserve_price = perp_market.amm.reserve_price()?;
+            let (bid_price, ask_price) = perp_market.amm.bid_ask_price(reserve_price)?;
+            msg!(
+                "vamm bid price = {} vamm ask price = {}",
+                bid_price,
+                ask_price
+            );
+        }
+        return Err(ErrorCode::NoFill.into());
+    }
+
+    Ok(())
+}
+
+pub fn jit_swift<'c: 'info, 'info>(
+    ctx: Context<'_, '_, 'c, 'info, JitSwift<'info>>,
+    params: JitSwiftParams,
+) -> Result<()> {
+    let clock = Clock::get()?;
+    let slot = clock.slot;
+
+    let taker = ctx.accounts.taker.load()?;
+    let maker = ctx.accounts.user.load()?;
+
+    let taker_swift_account = ctx.accounts.taker_swift_user_orders.load()?;
+    let taker_order_id = taker_swift_account
+        .iter()
+        .find(|swift_order_id| swift_order_id.uuid == params.swift_order_uuid)
+        .ok_or(ErrorCode::SwiftOrderDoesNotExist)?
+        .order_id;
+    let taker_order = taker
+        .get_order(taker_order_id)
+        .ok_or(ErrorCode::TakerOrderNotFound)?;
+
+    let remaining_accounts_iter = &mut ctx.remaining_accounts.iter().peekable();
+    let AccountMaps {
+        perp_market_map,
+        spot_market_map,
+        mut oracle_map,
+    } = load_maps(
+        remaining_accounts_iter,
+        &BTreeSet::new(),
+        &BTreeSet::new(),
+        slot,
+        None,
+    )?;
+
+    let oracle_price = oracle_map
+        .get_price_data(
+            &perp_market_map
+                .get_ref(&taker_order.market_index)?
+                .oracle_id(),
+        )?
+        .price;
+
+    let (order_params, taker_base_asset_amount_unfilled, taker_price, maker_price) = process_order(
+        &maker,
+        &perp_market_map,
+        &spot_market_map,
+        taker_order,
+        slot,
+        params.max_position,
+        params.min_position,
+        oracle_price,
+        params.get_worst_price(oracle_price, taker_order.direction)?,
+        params.post_only.unwrap_or(PostOnlyParam::MustPostOnly),
+    )?;
+
+    drop(taker);
+    drop(maker);
+
+    place_and_make_swift(&ctx, order_params, params.swift_order_uuid)?;
+
+    let taker = ctx.accounts.taker.load()?;
+
+    let taker_base_asset_amount_unfilled_after = match taker.get_order(taker_order_id) {
+        Some(order) => order.get_base_asset_amount_unfilled(None)?,
+        None => 0,
+    };
+
+    if taker_base_asset_amount_unfilled_after == taker_base_asset_amount_unfilled {
+        // taker order failed to fill
+        msg!(
+            "taker price = {} maker price = {} oracle price = {}",
+            taker_price,
+            maker_price,
+            oracle_price
+        );
+        msg!("jit params {:?}", params);
+
+        let perp_market = perp_market_map.get_ref(&order_params.market_index)?;
+        let reserve_price = perp_market.amm.reserve_price()?;
+        let (bid_price, ask_price) = perp_market.amm.bid_ask_price(reserve_price)?;
+        msg!(
+            "vamm bid price = {} vamm ask price = {}",
+            bid_price,
+            ask_price
+        );
+
+        return Err(ErrorCode::NoFill.into());
+    }
+
+    Ok(())
+}
+
+#[inline(always)]
+fn process_order(
+    maker: &User,
+    perp_market_map: &PerpMarketMap,
+    spot_market_map: &SpotMarketMap,
+    taker_order: &Order,
+    slot: u64,
+    max_position: i64,
+    min_position: i64,
+    oracle_price: i64,
+    maker_worst_price: u64,
+    post_only: PostOnlyParam,
+) -> Result<(OrderParams, u64, u64, u64)> {
     let market_type = taker_order.market_type;
     let market_index = taker_order.market_index;
     let taker_direction = taker_order.direction;
@@ -53,41 +237,24 @@ pub fn jit<'c: 'info, 'info>(
         taker_order.oracle_price_offset
     );
 
-    let remaining_accounts_iter = &mut ctx.remaining_accounts.iter().peekable();
-    let AccountMaps {
-        perp_market_map,
-        spot_market_map,
-        mut oracle_map,
-    } = load_maps(
-        remaining_accounts_iter,
-        &BTreeSet::new(),
-        &BTreeSet::new(),
-        slot,
-        None,
-    )?;
+    let (tick_size, min_order_size, is_prediction_market) = if market_type == DriftMarketType::Perp
+    {
+        let perp_market = perp_market_map.get_ref(&market_index)?;
 
-    let (oracle_price, tick_size, min_order_size, is_prediction_market) =
-        if market_type == DriftMarketType::Perp {
-            let perp_market = perp_market_map.get_ref(&market_index)?;
-            let oracle_price = oracle_map.get_price_data(&perp_market.oracle_id())?.price;
+        (
+            perp_market.amm.order_tick_size,
+            perp_market.amm.min_order_size,
+            perp_market.is_prediction_market(),
+        )
+    } else {
+        let spot_market = spot_market_map.get_ref(&market_index)?;
 
-            (
-                oracle_price,
-                perp_market.amm.order_tick_size,
-                perp_market.amm.min_order_size,
-                perp_market.is_prediction_market(),
-            )
-        } else {
-            let spot_market = spot_market_map.get_ref(&market_index)?;
-            let oracle_price = oracle_map.get_price_data(&spot_market.oracle_id())?.price;
-
-            (
-                oracle_price,
-                spot_market.order_tick_size,
-                spot_market.min_order_size,
-                false,
-            )
-        };
+        (
+            spot_market.order_tick_size,
+            spot_market.min_order_size,
+            false,
+        )
+    };
 
     let taker_price = match taker_order.get_limit_price(
         Some(oracle_price),
@@ -115,7 +282,6 @@ pub fn jit<'c: 'info, 'info>(
     };
 
     let maker_direction = taker_direction.opposite();
-    let maker_worst_price = params.get_worst_price(oracle_price, taker_direction)?;
     match maker_direction {
         PositionDirection::Long => {
             if taker_price > maker_worst_price {
@@ -191,7 +357,8 @@ pub fn jit<'c: 'info, 'info>(
     };
 
     let maker_base_asset_amount = match check_position_limits(
-        params,
+        max_position,
+        min_position,
         maker_direction,
         taker_base_asset_amount_unfilled,
         maker_existing_position,
@@ -212,10 +379,7 @@ pub fn jit<'c: 'info, 'info>(
         price: maker_price,
         market_index,
         reduce_only: false,
-        post_only: params
-            .post_only
-            .unwrap_or(PostOnlyParam::MustPostOnly)
-            .to_drift_param(),
+        post_only,
         immediate_or_cancel: true,
         max_ts: None,
         trigger_price: None,
@@ -225,42 +389,12 @@ pub fn jit<'c: 'info, 'info>(
         auction_start_price: None,
         auction_end_price: None,
     };
-
-    drop(taker);
-    drop(maker);
-
-    place_and_make(&ctx, params.taker_order_id, order_params)?;
-
-    let taker = ctx.accounts.taker.load()?;
-
-    let taker_base_asset_amount_unfilled_after = match taker.get_order(params.taker_order_id) {
-        Some(order) => order.get_base_asset_amount_unfilled(None)?,
-        None => 0,
-    };
-
-    if taker_base_asset_amount_unfilled_after == taker_base_asset_amount_unfilled {
-        // taker order failed to fill
-        msg!(
-            "taker price = {} maker price = {} oracle price = {}",
-            taker_price,
-            maker_price,
-            oracle_price
-        );
-        msg!("jit params {:?}", params);
-        if market_type == DriftMarketType::Perp {
-            let perp_market = perp_market_map.get_ref(&market_index)?;
-            let reserve_price = perp_market.amm.reserve_price()?;
-            let (bid_price, ask_price) = perp_market.amm.bid_ask_price(reserve_price)?;
-            msg!(
-                "vamm bid price = {} vamm ask price = {}",
-                bid_price,
-                ask_price
-            );
-        }
-        return Err(ErrorCode::NoFill.into());
-    }
-
-    Ok(())
+    Ok((
+        order_params,
+        taker_base_asset_amount_unfilled,
+        taker_price,
+        maker_price,
+    ))
 }
 
 #[derive(Accounts)]
@@ -274,6 +408,24 @@ pub struct Jit<'info> {
     pub taker: AccountLoader<'info, User>,
     #[account(mut)]
     pub taker_stats: AccountLoader<'info, UserStats>,
+    pub authority: Signer<'info>,
+    pub drift_program: Program<'info, Drift>,
+}
+
+#[derive(Accounts)]
+pub struct JitSwift<'info> {
+    pub state: Box<Account<'info, State>>,
+    #[account(mut)]
+    pub user: AccountLoader<'info, User>,
+    #[account(mut)]
+    pub user_stats: AccountLoader<'info, UserStats>,
+    #[account(mut)]
+    pub taker: AccountLoader<'info, User>,
+    #[account(mut)]
+    pub taker_stats: AccountLoader<'info, UserStats>,
+    /// CHECK: checked in SwiftUserOrdersZeroCopy checks
+    #[account(mut)]
+    pub taker_swift_user_orders: AccountInfo<'info>,
     pub authority: Signer<'info>,
     pub drift_program: Program<'info, Drift>,
 }
@@ -322,21 +474,66 @@ impl JitParams {
     }
 }
 
+#[derive(Debug, Clone, Copy, AnchorSerialize, AnchorDeserialize, PartialEq, Eq)]
+pub struct JitSwiftParams {
+    pub swift_order_uuid: [u8; 8],
+    pub max_position: i64,
+    pub min_position: i64,
+    pub bid: i64,
+    pub ask: i64,
+    pub price_type: PriceType,
+    pub post_only: Option<PostOnlyParam>,
+}
+
+impl Default for JitSwiftParams {
+    fn default() -> Self {
+        Self {
+            swift_order_uuid: [0; 8],
+            max_position: 0,
+            min_position: 0,
+            bid: 0,
+            ask: 0,
+            price_type: PriceType::Limit,
+            post_only: None,
+        }
+    }
+}
+
+impl JitSwiftParams {
+    pub fn get_worst_price(
+        self,
+        oracle_price: i64,
+        taker_direction: PositionDirection,
+    ) -> DriftResult<u64> {
+        match (taker_direction, self.price_type) {
+            (PositionDirection::Long, PriceType::Limit) => Ok(self.ask.unsigned_abs()),
+            (PositionDirection::Short, PriceType::Limit) => Ok(self.bid.unsigned_abs()),
+            (PositionDirection::Long, PriceType::Oracle) => {
+                Ok(oracle_price.safe_add(self.ask)?.unsigned_abs())
+            }
+            (PositionDirection::Short, PriceType::Oracle) => {
+                Ok(oracle_price.safe_add(self.bid)?.unsigned_abs())
+            }
+        }
+    }
+}
+
 fn check_position_limits(
-    params: JitParams,
+    max_position: i64,
+    min_position: i64,
     maker_direction: PositionDirection,
     taker_base_asset_amount_unfilled: u64,
     maker_existing_position: i64,
     min_order_size: u64,
 ) -> Result<u64> {
     if maker_direction == PositionDirection::Long {
-        let size = params.max_position.safe_sub(maker_existing_position)?;
+        let size = max_position.safe_sub(maker_existing_position)?;
 
         if size <= min_order_size.cast()? {
             msg!(
                 "maker existing position {} >= max position {} + min order size {}",
                 maker_existing_position,
-                params.max_position,
+                max_position,
                 min_order_size
             );
             return Err(ErrorCode::PositionLimitBreached.into());
@@ -344,13 +541,13 @@ fn check_position_limits(
 
         Ok(size.unsigned_abs().min(taker_base_asset_amount_unfilled))
     } else {
-        let size = maker_existing_position.safe_sub(params.min_position)?;
+        let size = maker_existing_position.safe_sub(min_position)?;
 
         if size <= min_order_size.cast()? {
             msg!(
                 "maker existing position {} <= min position {} + min order size {}",
                 maker_existing_position,
-                params.min_position,
+                min_position,
                 min_order_size
             );
             return Err(ErrorCode::PositionLimitBreached.into());
@@ -387,62 +584,175 @@ fn place_and_make<'info>(
     Ok(())
 }
 
+fn place_and_make_swift<'info>(
+    ctx: &Context<'_, '_, '_, 'info, JitSwift<'info>>,
+    order_params: OrderParams,
+    swift_order_uuid: [u8; 8],
+) -> Result<()> {
+    let drift_program = ctx.accounts.drift_program.to_account_info();
+    let state = ctx.accounts.state.to_account_info();
+    let taker = ctx.accounts.taker.to_account_info();
+    let taker_stats = ctx.accounts.taker_stats.to_account_info();
+    let taker_swift_user_orders = ctx.accounts.taker_swift_user_orders.to_account_info();
+
+    let cpi_accounts_place_and_make = PlaceAndMakeSwift {
+        state,
+        user: ctx.accounts.user.to_account_info().clone(),
+        user_stats: ctx.accounts.user_stats.to_account_info().clone(),
+        authority: ctx.accounts.authority.to_account_info().clone(),
+        taker,
+        taker_stats,
+        taker_swift_user_orders,
+    };
+
+    let cpi_context_place_and_make = CpiContext::new(drift_program, cpi_accounts_place_and_make)
+        .with_remaining_accounts(ctx.remaining_accounts.into());
+
+    drift::cpi::place_and_make_swift_perp_order(
+        cpi_context_place_and_make,
+        order_params,
+        swift_order_uuid,
+    )?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_check_position_limits() {
-        let params = JitParams {
-            max_position: 100,
-            min_position: -100,
-            ..Default::default()
-        };
+        let max_position: i64 = 100;
+        let min_position: i64 = -100;
 
         // same direction, doesn't breach
-        let result = check_position_limits(params, PositionDirection::Long, 10, 40, 0);
+        let result = check_position_limits(
+            max_position,
+            min_position,
+            PositionDirection::Long,
+            10,
+            40,
+            0,
+        );
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 10);
-        let result = check_position_limits(params, PositionDirection::Short, 10, -40, 0);
+        let result = check_position_limits(
+            max_position,
+            min_position,
+            PositionDirection::Short,
+            10,
+            -40,
+            0,
+        );
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 10);
 
         // same direction, whole order breaches, only takes enough to hit limit
-        let result = check_position_limits(params, PositionDirection::Long, 100, 40, 0);
+        let result = check_position_limits(
+            max_position,
+            min_position,
+            PositionDirection::Long,
+            100,
+            40,
+            0,
+        );
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 60);
-        let result = check_position_limits(params, PositionDirection::Short, 100, -40, 0);
+        let result = check_position_limits(
+            max_position,
+            min_position,
+            PositionDirection::Short,
+            100,
+            -40,
+            0,
+        );
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 60);
 
         // opposite direction, doesn't breach
-        let result = check_position_limits(params, PositionDirection::Long, 10, -40, 0);
+        let result = check_position_limits(
+            max_position,
+            min_position,
+            PositionDirection::Long,
+            10,
+            -40,
+            0,
+        );
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 10);
-        let result = check_position_limits(params, PositionDirection::Short, 10, 40, 0);
+        let result = check_position_limits(
+            max_position,
+            min_position,
+            PositionDirection::Short,
+            10,
+            40,
+            0,
+        );
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 10);
 
         // opposite direction, whole order breaches, only takes enough to take flipped limit
-        let result = check_position_limits(params, PositionDirection::Long, 200, -40, 0);
+        let result = check_position_limits(
+            max_position,
+            min_position,
+            PositionDirection::Long,
+            200,
+            -40,
+            0,
+        );
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 140);
-        let result = check_position_limits(params, PositionDirection::Short, 200, 40, 0);
+        let result = check_position_limits(
+            max_position,
+            min_position,
+            PositionDirection::Short,
+            200,
+            40,
+            0,
+        );
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 140);
 
         // opposite direction, maker already breached, allows reducing
-        let result = check_position_limits(params, PositionDirection::Long, 200, -150, 0);
+        let result = check_position_limits(
+            max_position,
+            min_position,
+            PositionDirection::Long,
+            200,
+            -150,
+            0,
+        );
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 200);
-        let result = check_position_limits(params, PositionDirection::Short, 200, 150, 0);
+        let result = check_position_limits(
+            max_position,
+            min_position,
+            PositionDirection::Short,
+            200,
+            150,
+            0,
+        );
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 200);
 
         // same direction, maker already breached, errors
-        let result = check_position_limits(params, PositionDirection::Long, 200, 150, 0);
+        let result = check_position_limits(
+            max_position,
+            min_position,
+            PositionDirection::Long,
+            200,
+            150,
+            0,
+        );
         assert!(result.is_err());
-        let result = check_position_limits(params, PositionDirection::Short, 200, -150, 0);
+        let result = check_position_limits(
+            max_position,
+            min_position,
+            PositionDirection::Short,
+            200,
+            -150,
+            0,
+        );
         assert!(result.is_err());
     }
 }

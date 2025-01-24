@@ -1,5 +1,5 @@
 export type JitProxy = {
-	version: '0.10.2';
+	version: '0.12.0';
 	name: 'jit_proxy';
 	instructions: [
 		{
@@ -46,6 +46,59 @@ export type JitProxy = {
 					name: 'params';
 					type: {
 						defined: 'JitParams';
+					};
+				}
+			];
+		},
+		{
+			name: 'jitSwift';
+			accounts: [
+				{
+					name: 'state';
+					isMut: false;
+					isSigner: false;
+				},
+				{
+					name: 'user';
+					isMut: true;
+					isSigner: false;
+				},
+				{
+					name: 'userStats';
+					isMut: true;
+					isSigner: false;
+				},
+				{
+					name: 'taker';
+					isMut: true;
+					isSigner: false;
+				},
+				{
+					name: 'takerStats';
+					isMut: true;
+					isSigner: false;
+				},
+				{
+					name: 'takerSwiftUserOrders';
+					isMut: true;
+					isSigner: false;
+				},
+				{
+					name: 'authority';
+					isMut: false;
+					isSigner: true;
+				},
+				{
+					name: 'driftProgram';
+					isMut: false;
+					isSigner: false;
+				}
+			];
+			args: [
+				{
+					name: 'params';
+					type: {
+						defined: 'JitSwiftParams';
 					};
 				}
 			];
@@ -142,6 +195,50 @@ export type JitProxy = {
 					{
 						name: 'takerOrderId';
 						type: 'u32';
+					},
+					{
+						name: 'maxPosition';
+						type: 'i64';
+					},
+					{
+						name: 'minPosition';
+						type: 'i64';
+					},
+					{
+						name: 'bid';
+						type: 'i64';
+					},
+					{
+						name: 'ask';
+						type: 'i64';
+					},
+					{
+						name: 'priceType';
+						type: {
+							defined: 'PriceType';
+						};
+					},
+					{
+						name: 'postOnly';
+						type: {
+							option: {
+								defined: 'PostOnlyParam';
+							};
+						};
+					}
+				];
+			};
+		},
+		{
+			name: 'JitSwiftParams';
+			type: {
+				kind: 'struct';
+				fields: [
+					{
+						name: 'swiftOrderUuid';
+						type: {
+							array: ['u8', 8];
+						};
 					},
 					{
 						name: 'maxPosition';
@@ -275,12 +372,17 @@ export type JitProxy = {
 			code: 6009;
 			name: 'NoFill';
 			msg: 'NoFill';
+		},
+		{
+			code: 6010;
+			name: 'SwiftOrderDoesNotExist';
+			msg: 'SwiftOrderDoesNotExist';
 		}
 	];
 };
 
 export const IDL: JitProxy = {
-	version: '0.10.2',
+	version: '0.12.0',
 	name: 'jit_proxy',
 	instructions: [
 		{
@@ -327,6 +429,59 @@ export const IDL: JitProxy = {
 					name: 'params',
 					type: {
 						defined: 'JitParams',
+					},
+				},
+			],
+		},
+		{
+			name: 'jitSwift',
+			accounts: [
+				{
+					name: 'state',
+					isMut: false,
+					isSigner: false,
+				},
+				{
+					name: 'user',
+					isMut: true,
+					isSigner: false,
+				},
+				{
+					name: 'userStats',
+					isMut: true,
+					isSigner: false,
+				},
+				{
+					name: 'taker',
+					isMut: true,
+					isSigner: false,
+				},
+				{
+					name: 'takerStats',
+					isMut: true,
+					isSigner: false,
+				},
+				{
+					name: 'takerSwiftUserOrders',
+					isMut: true,
+					isSigner: false,
+				},
+				{
+					name: 'authority',
+					isMut: false,
+					isSigner: true,
+				},
+				{
+					name: 'driftProgram',
+					isMut: false,
+					isSigner: false,
+				},
+			],
+			args: [
+				{
+					name: 'params',
+					type: {
+						defined: 'JitSwiftParams',
 					},
 				},
 			],
@@ -423,6 +578,50 @@ export const IDL: JitProxy = {
 					{
 						name: 'takerOrderId',
 						type: 'u32',
+					},
+					{
+						name: 'maxPosition',
+						type: 'i64',
+					},
+					{
+						name: 'minPosition',
+						type: 'i64',
+					},
+					{
+						name: 'bid',
+						type: 'i64',
+					},
+					{
+						name: 'ask',
+						type: 'i64',
+					},
+					{
+						name: 'priceType',
+						type: {
+							defined: 'PriceType',
+						},
+					},
+					{
+						name: 'postOnly',
+						type: {
+							option: {
+								defined: 'PostOnlyParam',
+							},
+						},
+					},
+				],
+			},
+		},
+		{
+			name: 'JitSwiftParams',
+			type: {
+				kind: 'struct',
+				fields: [
+					{
+						name: 'swiftOrderUuid',
+						type: {
+							array: ['u8', 8],
+						},
 					},
 					{
 						name: 'maxPosition',
@@ -556,6 +755,11 @@ export const IDL: JitProxy = {
 			code: 6009,
 			name: 'NoFill',
 			msg: 'NoFill',
+		},
+		{
+			code: 6010,
+			name: 'SwiftOrderDoesNotExist',
+			msg: 'SwiftOrderDoesNotExist',
 		},
 	],
 };
