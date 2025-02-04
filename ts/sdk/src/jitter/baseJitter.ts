@@ -246,6 +246,7 @@ export abstract class BaseJitter {
 					quoteAssetAmountFilled: ZERO,
 					quoteAssetAmount: ZERO,
 					userOrderId: 0,
+					postedSlotTail: 0,
 				};
 				swiftOrder.price = getAuctionPrice(
 					swiftOrder,
