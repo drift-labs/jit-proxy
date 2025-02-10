@@ -942,8 +942,8 @@ dependencies = [
 
 [[package]]
 name = "drift"
-version = "2.106.0"
-source = "git+https://github.com/drift-labs/protocol-v2.git?rev=v2.106.0#02df3b90a49d3f18695722e72ca465ff7d694238"
+version = "2.109.0"
+source = "git+https://github.com/drift-labs/protocol-v2.git?rev=v2.109.0#e99b9cd00b03136092749447af1b25a6880a9b4c"
 dependencies = [
  "ahash 0.8.6",
  "anchor-lang",
@@ -1656,7 +1656,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 [[package]]
 name = "openbook-v2-light"
 version = "0.1.0"
-source = "git+https://github.com/drift-labs/protocol-v2.git?rev=v2.106.0#02df3b90a49d3f18695722e72ca465ff7d694238"
+source = "git+https://github.com/drift-labs/protocol-v2.git?rev=v2.109.0#e99b9cd00b03136092749447af1b25a6880a9b4c"
 dependencies = [
  "anchor-lang",
  "borsh 0.10.3",
@@ -1823,7 +1823,7 @@ checksum = "44de48029c54ec1ca570786b5baeb906b0fc2409c8e0145585e287ee7a526c72"
 [[package]]
 name = "pyth-lazer-protocol"
 version = "0.1.2"
-source = "git+https://github.com/drift-labs/pyth-crosschain?rev=57ed54b2e0b1ce74a6d99c95302fec8752d7108f#57ed54b2e0b1ce74a6d99c95302fec8752d7108f"
+source = "git+https://github.com/drift-labs/pyth-crosschain?rev=d790d1cb4da873a949cf33ff70349b7614b232eb#d790d1cb4da873a949cf33ff70349b7614b232eb"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -1836,7 +1836,7 @@ dependencies = [
 [[package]]
 name = "pyth-lazer-solana-contract"
 version = "0.2.0"
-source = "git+https://github.com/drift-labs/pyth-crosschain?rev=57ed54b2e0b1ce74a6d99c95302fec8752d7108f#57ed54b2e0b1ce74a6d99c95302fec8752d7108f"
+source = "git+https://github.com/drift-labs/pyth-crosschain?rev=d790d1cb4da873a949cf33ff70349b7614b232eb#d790d1cb4da873a949cf33ff70349b7614b232eb"
 dependencies = [
  "anchor-lang",
  "bytemuck",
@@ -2806,7 +2806,7 @@ checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 [[package]]
 name = "switchboard"
 version = "0.1.0"
-source = "git+https://github.com/drift-labs/protocol-v2.git?rev=v2.106.0#02df3b90a49d3f18695722e72ca465ff7d694238"
+source = "git+https://github.com/drift-labs/protocol-v2.git?rev=v2.109.0#e99b9cd00b03136092749447af1b25a6880a9b4c"
 dependencies = [
  "anchor-lang",
 ]
@@ -2814,7 +2814,7 @@ dependencies = [
 [[package]]
 name = "switchboard-on-demand"
 version = "0.1.0"
-source = "git+https://github.com/drift-labs/protocol-v2.git?rev=v2.106.0#02df3b90a49d3f18695722e72ca465ff7d694238"
+source = "git+https://github.com/drift-labs/protocol-v2.git?rev=v2.109.0#e99b9cd00b03136092749447af1b25a6880a9b4c"
 dependencies = [
  "anchor-lang",
  "bytemuck",
