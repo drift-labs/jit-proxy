@@ -8,12 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 
+### Fixes
+
+### Breaking
+
+## [0.13.0] - 2025-02-11
+
+### Features
+
 - program/sdk: swift integration ([#52](https://github.com/drift-labs/jit-proxy/pull/52))
 - program: upgrade drift version for pyth lazer ([#53](https://github.com/drift-labs/jit-proxy/pull/53))
 
 ### Fixes
 
 ### Breaking
+
 
 ## [0.12.0] - 2024-12-06
 
