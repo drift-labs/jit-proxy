@@ -87,8 +87,8 @@ export class JitProxyClient {
 				taker: params.takerKey,
 				takerStats: params.takerStatsKey,
 				takerUserAccount: params.taker,
+				signingAuthority: params.authorityToUse,
 			},
-			params.authorityToUse,
 			precedingIxs
 		);
 
