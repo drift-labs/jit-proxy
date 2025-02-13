@@ -1,6 +1,6 @@
 {
 	"name": "@drift-labs/jit-proxy",
-	"version": "0.13.11",
+	"version": "0.13.12",
 	"scripts": {
 		"clean": "rm -rf lib",
 		"build": "yarn clean && tsc"
