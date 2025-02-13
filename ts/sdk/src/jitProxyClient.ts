@@ -12,10 +12,18 @@ import {
 	UserAccount,
 } from '@drift-labs/sdk';
 import { IDL, JitProxy } from './types/jit_proxy';
-import { PublicKey, TransactionInstruction } from '@solana/web3.js';
+import {
+	ComputeBudgetProgram,
+	PublicKey,
+	TransactionInstruction,
+	TransactionMessage,
+	VersionedTransaction,
+} from '@solana/web3.js';
 import { Program } from '@coral-xyz/anchor';
 import { TxSigAndSlot } from '@drift-labs/sdk';
 import { SignedSwiftOrderParams } from '@drift-labs/sdk/lib/node/swift/types';
+
+export const DEFAULT_CU_LIMIT = 1_400_000;
 
 export type JitIxParams = {
 	takerKey: PublicKey;
@@ -77,8 +85,20 @@ export class JitProxyClient {
 
 	public async jitSwift(
 		params: JitSwiftIxParams,
-		txParams?: TxParams
+		computeBudgetParams?: {
+			computeUnits: number;
+			computeUnitsPrice: number;
+		}
 	): Promise<TxSigAndSlot> {
+		const ixs = [
+			ComputeBudgetProgram.setComputeUnitLimit({
+				units: computeBudgetParams?.computeUnits || DEFAULT_CU_LIMIT,
+			}),
+			ComputeBudgetProgram.setComputeUnitPrice({
+				microLamports: computeBudgetParams?.computeUnitsPrice || 0,
+			}),
+		];
+
 		const swiftTakerIxs = await this.driftClient.getPlaceSwiftTakerPerpOrderIxs(
 			params.signedSwiftOrderParams,
 			params.marketIndex,
@@ -88,17 +108,23 @@ export class JitProxyClient {
 				takerUserAccount: params.taker,
 				signingAuthority: params.authorityToUse,
 			},
-			undefined,
-			3
+			ixs
 		);
+		ixs.push(...swiftTakerIxs);
 
 		const ix = await this.getJitSwiftIx(params);
-		const tx = await this.driftClient.buildTransaction(
-			[...swiftTakerIxs, ix],
-			txParams,
-			0
-		);
-		return await this.driftClient.sendTransaction(tx);
+		ixs.push(ix);
+
+		const v0Message = new TransactionMessage({
+			instructions: ixs,
+			payerKey: this.driftClient.wallet.publicKey,
+			recentBlockhash: (
+				await this.driftClient.txHandler.getLatestBlockhashForTransaction()
+			).blockhash,
+		}).compileToV0Message(await this.driftClient.fetchAllLookupTableAccounts());
+		const tx = new VersionedTransaction(v0Message);
+
+		return await this.driftClient.txSender.sendVersionedTransaction(tx);
 	}
 
 	public async getJitIx({
