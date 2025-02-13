@@ -77,8 +77,7 @@ export class JitProxyClient {
 
 	public async jitSwift(
 		params: JitSwiftIxParams,
-		txParams?: TxParams,
-		precedingIxs?: TransactionInstruction[]
+		txParams?: TxParams
 	): Promise<TxSigAndSlot> {
 		const swiftTakerIxs = await this.driftClient.getPlaceSwiftTakerPerpOrderIxs(
 			params.signedSwiftOrderParams,
@@ -89,13 +88,15 @@ export class JitProxyClient {
 				takerUserAccount: params.taker,
 				signingAuthority: params.authorityToUse,
 			},
-			precedingIxs
+			undefined,
+			3
 		);
 
 		const ix = await this.getJitSwiftIx(params);
 		const tx = await this.driftClient.buildTransaction(
 			[...swiftTakerIxs, ix],
-			txParams
+			txParams,
+			0
 		);
 		return await this.driftClient.sendTransaction(tx);
 	}
