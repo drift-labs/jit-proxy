@@ -208,6 +208,9 @@ export abstract class BaseJitter {
 				const takerAuthority = new PublicKey(
 					orderMessageRaw['taker_authority']
 				);
+				const signingAuthority = new PublicKey(
+					orderMessageRaw['signing_authority']
+				);
 				const takerUserPubkey = await getUserAccountPublicKey(
 					this.driftClient.program.programId,
 					takerAuthority,
@@ -289,7 +292,7 @@ export abstract class BaseJitter {
 				}
 
 				const promise = this.createTrySwiftFill(
-					takerAuthority,
+					signingAuthority,
 					{
 						orderParams: swiftOrderParamsBufHex,
 						signature: Buffer.from(
