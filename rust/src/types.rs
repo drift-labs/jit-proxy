@@ -1,4 +1,4 @@
-use drift_sdk::types::SdkError;
+use drift_rs::types::SdkError;
 use thiserror::Error;
 
 pub type JitResult<T> = Result<T, JitError>;
@@ -11,8 +11,8 @@ pub enum JitError {
     Sdk(String),
 }
 
-impl From<drift::error::ErrorCode> for JitError {
-    fn from(error: drift::error::ErrorCode) -> Self {
+impl From<drift_rs::drift_idl::errors::ErrorCode> for JitError {
+    fn from(error: drift_rs::drift_idl::errors::ErrorCode) -> Self {
         JitError::Drift(error.to_string())
     }
 }

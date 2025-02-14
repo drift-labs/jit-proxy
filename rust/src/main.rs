@@ -1,16 +1,17 @@
 use std::env;
-use std::str::FromStr;
 
-use anchor_client::Cluster;
 use dotenv::dotenv;
+use drift_rs::{
+    event_subscriber::RpcClient,
+    jit_client::{ComputeBudgetParams, PriceType},
+    types::{CommitmentConfig, Context, RpcSendTransactionConfig},
+    utils::get_ws_url,
+    DriftClient,
+};
 use solana_sdk::signature::Keypair;
 
-use drift_sdk::types::{CommitmentConfig, Context, RpcSendTransactionConfig};
-use drift_sdk::{DriftClient, RpcAccountProvider};
-use jitter::{JitParams, Jitter};
-use types::ComputeBudgetParams;
+use crate::jitter::{JitParams, Jitter};
 
-pub mod jit_proxy_client;
 pub mod jitter;
 pub mod types;
 
@@ -33,13 +34,11 @@ async fn main() {
 
     let drift_client = DriftClient::new(
         Context::MainNet,
-        RpcAccountProvider::with_commitment(&rpc_url, CommitmentConfig::finalized()),
+        RpcClient::new_with_commitment(rpc_url.clone(), CommitmentConfig::finalized()),
         keypair.into(),
     )
     .await
     .unwrap();
-
-    drift_client.subscribe().await.unwrap();
 
     let config = RpcSendTransactionConfig::default();
 
@@ -47,16 +46,7 @@ async fn main() {
 
     let jitter = Jitter::new_with_shotgun(drift_client, Some(config), Some(cu_params));
 
-    let cluster = Cluster::from_str(&rpc_url).unwrap();
-    let url = cluster.ws_url().to_string();
-
-    let jit_params = JitParams::new(
-        0,
-        0,
-        -1_000_000,
-        1_000_000,
-        jit_proxy::state::PriceType::Oracle,
-    );
+    let jit_params = JitParams::new(0, 0, -1_000_000, 1_000_000, PriceType::Oracle);
 
     jitter.update_perp_params(0, jit_params.clone());
     jitter.update_perp_params(1, jit_params.clone());
@@ -70,5 +60,10 @@ async fn main() {
     jitter.update_perp_params(9, jit_params.clone());
     jitter.update_perp_params(10, jit_params.clone());
 
-    let _ = jitter.subscribe(url).await.unwrap();
+    jitter
+        .subscribe(get_ws_url(&rpc_url).expect("valid RPC url"))
+        .await
+        .unwrap();
+    let _ = tokio::signal::ctrl_c().await;
+    log::info!("jitter shutting down...");
 }
