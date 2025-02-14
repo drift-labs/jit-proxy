@@ -185,7 +185,7 @@ impl Jitter {
     pub async fn on_auction(&self, auction: ProgramAccountUpdate<User>) -> JitResult<()> {
         log::info!("Auction received");
         let user_pubkey = &auction.pubkey;
-        let user = auction.data_and_slot.data.clone();
+        let user = auction.data_and_slot.data;
         let user_stats_key = Wallet::derive_stats_account(&user.authority);
 
         for order in user.orders {
@@ -232,7 +232,7 @@ impl Jitter {
                         }
 
                         let jitter = self.jitter.clone();
-                        let taker = user_pubkey.clone();
+                        let taker = Pubkey::from_str(&user_pubkey).unwrap();
                         let order_signature = order_sig.clone();
 
                         let taker_stats: UserStats = self
@@ -243,22 +243,21 @@ impl Jitter {
                         let referrer_info = ReferrerInfo::get_referrer_info(taker_stats);
 
                         let param = param.clone();
-                        let ongoing_auction = tokio::spawn({
-                            let jitter = Arc::clone(&jitter);
+                        let ongoing_auction = tokio::spawn(
                             async move {
                                 let _ = jitter
                                     .try_fill(
-                                        user.clone(),
-                                        Pubkey::from_str(&taker).unwrap(),
-                                        user_stats_key.clone(),
-                                        order.clone(),
-                                        order_signature.clone(),
+                                        user,
+                                        taker,
+                                        user_stats_key,
+                                        order,
+                                        order_signature,
                                         referrer_info,
-                                        param.clone(),
+                                        param,
                                     )
                                     .await;
                             }
-                        });
+                        );
 
                         self.ongoing_auctions.insert(order_sig, ongoing_auction);
                     } else {
@@ -298,7 +297,7 @@ impl Jitter {
                         }
 
                         let jitter = self.jitter.clone();
-                        let taker = user_pubkey.clone();
+                        let taker = Pubkey::from_str(&user_pubkey).unwrap();
                         let order_signature = order_sig.clone();
 
                         let taker_stats: UserStats =
@@ -309,13 +308,13 @@ impl Jitter {
                         let ongoing_auction = tokio::spawn(async move {
                             let _ = jitter
                                 .try_fill(
-                                    user.clone(),
-                                    Pubkey::from_str(&taker).unwrap(),
-                                    user_stats_key.clone(),
-                                    order.clone(),
-                                    order_signature.clone(),
+                                    user,
+                                    taker,
+                                    user_stats_key,
+                                    order,
+                                    order_signature,
                                     referrer_info,
-                                    param.clone(),
+                                    param,
                                 )
                                 .await;
                         });
