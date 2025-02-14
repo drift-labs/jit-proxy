@@ -1,3 +1,3 @@
-pub mod jit_proxy_client;
+pub use drift_rs::jit_client::JitProxyClient;
 pub mod jitter;
 pub mod types;
