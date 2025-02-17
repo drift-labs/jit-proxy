@@ -1,7 +1,7 @@
 use anchor_lang::prelude::Pubkey;
 use anchor_lang::prelude::*;
 use drift::controller::position::PositionDirection;
-use drift::cpi::accounts::{PlaceAndMake, PlaceAndMakeSwift};
+use drift::cpi::accounts::{PlaceAndMake, PlaceAndMakeSignedMsg};
 use drift::error::DriftResult;
 use drift::instructions::optional_accounts::{load_maps, AccountMaps};
 use drift::math::casting::Cast;
@@ -9,9 +9,9 @@ use drift::math::safe_math::SafeMath;
 use drift::program::Drift;
 use drift::state::order_params::OrderParams;
 use drift::state::perp_market_map::PerpMarketMap;
+use drift::state::signed_msg_user::SignedMsgUserOrdersLoader;
 use drift::state::spot_market_map::SpotMarketMap;
 use drift::state::state::State;
-use drift::state::swift_user::SwiftUserOrdersLoader;
 use drift::state::user::Order;
 use drift::state::user::{MarketType as DriftMarketType, OrderTriggerCondition, OrderType};
 use drift::state::user::{User, UserStats};
@@ -108,9 +108,9 @@ pub fn jit<'c: 'info, 'info>(
     Ok(())
 }
 
-pub fn jit_swift<'c: 'info, 'info>(
-    ctx: Context<'_, '_, 'c, 'info, JitSwift<'info>>,
-    params: JitSwiftParams,
+pub fn jit_signed_msg<'c: 'info, 'info>(
+    ctx: Context<'_, '_, 'c, 'info, JitSignedMsg<'info>>,
+    params: JitSignedMsgParams,
 ) -> Result<()> {
     let clock = Clock::get()?;
     let slot = clock.slot;
@@ -118,11 +118,11 @@ pub fn jit_swift<'c: 'info, 'info>(
     let taker = ctx.accounts.taker.load()?;
     let maker = ctx.accounts.user.load()?;
 
-    let taker_swift_account = ctx.accounts.taker_swift_user_orders.load()?;
-    let taker_order_id = taker_swift_account
+    let taker_signed_msg_account = ctx.accounts.taker_signed_msg_user_orders.load()?;
+    let taker_order_id = taker_signed_msg_account
         .iter()
-        .find(|swift_order_id| swift_order_id.uuid == params.swift_order_uuid)
-        .ok_or(ErrorCode::SwiftOrderDoesNotExist)?
+        .find(|signed_msg_order_id| signed_msg_order_id.uuid == params.signed_msg_order_uuid)
+        .ok_or(ErrorCode::SignedMsgOrderDoesNotExist)?
         .order_id;
     let taker_order = taker
         .get_order(taker_order_id)
@@ -165,7 +165,7 @@ pub fn jit_swift<'c: 'info, 'info>(
     drop(taker);
     drop(maker);
 
-    place_and_make_swift(&ctx, order_params, params.swift_order_uuid)?;
+    place_and_make_signed_msg(&ctx, order_params, params.signed_msg_order_uuid)?;
 
     let taker = ctx.accounts.taker.load()?;
 
@@ -414,7 +414,7 @@ pub struct Jit<'info> {
 }
 
 #[derive(Accounts)]
-pub struct JitSwift<'info> {
+pub struct JitSignedMsg<'info> {
     pub state: Box<Account<'info, State>>,
     #[account(mut)]
     pub user: AccountLoader<'info, User>,
@@ -424,9 +424,9 @@ pub struct JitSwift<'info> {
     pub taker: AccountLoader<'info, User>,
     #[account(mut)]
     pub taker_stats: AccountLoader<'info, UserStats>,
-    /// CHECK: checked in SwiftUserOrdersZeroCopy checks
+    /// CHECK: checked in SignedMsgUserOrdersZeroCopy checks
     #[account(mut)]
-    pub taker_swift_user_orders: AccountInfo<'info>,
+    pub taker_signed_msg_user_orders: AccountInfo<'info>,
     pub authority: Signer<'info>,
     pub drift_program: Program<'info, Drift>,
 }
@@ -476,8 +476,8 @@ impl JitParams {
 }
 
 #[derive(Debug, Clone, Copy, AnchorSerialize, AnchorDeserialize, PartialEq, Eq)]
-pub struct JitSwiftParams {
-    pub swift_order_uuid: [u8; 8],
+pub struct JitSignedMsgParams {
+    pub signed_msg_order_uuid: [u8; 8],
     pub max_position: i64,
     pub min_position: i64,
     pub bid: i64,
@@ -486,10 +486,10 @@ pub struct JitSwiftParams {
     pub post_only: Option<PostOnlyParam>,
 }
 
-impl Default for JitSwiftParams {
+impl Default for JitSignedMsgParams {
     fn default() -> Self {
         Self {
-            swift_order_uuid: [0; 8],
+            signed_msg_order_uuid: [0; 8],
             max_position: 0,
             min_position: 0,
             bid: 0,
@@ -500,7 +500,7 @@ impl Default for JitSwiftParams {
     }
 }
 
-impl JitSwiftParams {
+impl JitSignedMsgParams {
     pub fn get_worst_price(
         self,
         oracle_price: i64,
@@ -585,34 +585,34 @@ fn place_and_make<'info>(
     Ok(())
 }
 
-fn place_and_make_swift<'info>(
-    ctx: &Context<'_, '_, '_, 'info, JitSwift<'info>>,
+fn place_and_make_signed_msg<'info>(
+    ctx: &Context<'_, '_, '_, 'info, JitSignedMsg<'info>>,
     order_params: OrderParams,
-    swift_order_uuid: [u8; 8],
+    signed_msg_order_uuid: [u8; 8],
 ) -> Result<()> {
     let drift_program = ctx.accounts.drift_program.to_account_info();
     let state = ctx.accounts.state.to_account_info();
     let taker = ctx.accounts.taker.to_account_info();
     let taker_stats = ctx.accounts.taker_stats.to_account_info();
-    let taker_swift_user_orders = ctx.accounts.taker_swift_user_orders.to_account_info();
+    let taker_signed_msg_user_orders = ctx.accounts.taker_signed_msg_user_orders.to_account_info();
 
-    let cpi_accounts_place_and_make = PlaceAndMakeSwift {
+    let cpi_accounts_place_and_make = PlaceAndMakeSignedMsg {
         state,
         user: ctx.accounts.user.to_account_info().clone(),
         user_stats: ctx.accounts.user_stats.to_account_info().clone(),
         authority: ctx.accounts.authority.to_account_info().clone(),
         taker,
         taker_stats,
-        taker_swift_user_orders,
+        taker_signed_msg_user_orders,
     };
 
     let cpi_context_place_and_make = CpiContext::new(drift_program, cpi_accounts_place_and_make)
         .with_remaining_accounts(ctx.remaining_accounts.into());
 
-    drift::cpi::place_and_make_swift_perp_order(
+    drift::cpi::place_and_make_signed_msg_perp_order(
         cpi_context_place_and_make,
         order_params,
-        swift_order_uuid,
+        signed_msg_order_uuid,
     )?;
     Ok(())
 }

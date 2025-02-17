@@ -13,14 +13,14 @@ import {
 	Order,
 	PostOnlyParams,
 	PRICE_PRECISION,
+	SignedMsgOrderParams,
+	SignedMsgOrderSubscriber,
 	SlotSubscriber,
-	SwiftOrderSubscriber,
 	UserAccount,
 	UserStatsMap,
 	ZERO,
 } from '@drift-labs/sdk';
 import { BaseJitter } from './baseJitter';
-import { SignedSwiftOrderParams } from '@drift-labs/sdk/lib/node/swift/types';
 
 type AuctionAndOrderDetails = {
 	slotsTilCross: number;
@@ -43,21 +43,21 @@ export class JitterSniper extends BaseJitter {
 		jitProxyClient,
 		driftClient,
 		userStatsMap,
-		swiftOrderSubscriber,
+		signedMsgOrderSubscriber,
 	}: {
 		driftClient: DriftClient;
 		slotSubscriber: SlotSubscriber;
 		auctionSubscriber: AuctionSubscriber;
 		jitProxyClient: JitProxyClient;
 		userStatsMap?: UserStatsMap;
-		swiftOrderSubscriber?: SwiftOrderSubscriber;
+		signedMsgOrderSubscriber?: SignedMsgOrderSubscriber;
 	}) {
 		super({
 			auctionSubscriber,
 			jitProxyClient,
 			driftClient,
 			userStatsMap,
-			swiftOrderSubscriber,
+			signedMsgOrderSubscriber,
 			slotSubscriber,
 		});
 		this.slotSubscriber = slotSubscriber;
@@ -247,7 +247,7 @@ export class JitterSniper extends BaseJitter {
 
 	createTrySwiftFill(
 		authorityToUse: PublicKey,
-		signedSwiftOrderParams: SignedSwiftOrderParams,
+		signedMsgOrderParams: SignedMsgOrderParams,
 		uuid: Uint8Array,
 		taker: UserAccount,
 		takerKey: PublicKey,
@@ -402,7 +402,7 @@ export class JitterSniper extends BaseJitter {
 								referrerInfo,
 								subAccountId: params.subAccountId,
 								authorityToUse,
-								signedSwiftOrderParams,
+								signedMsgOrderParams,
 								uuid,
 								marketIndex,
 							},

@@ -135,10 +135,10 @@
     bn.js "^5.1.2"
     buffer-layout "^1.2.0"
 
-"@drift-labs/sdk@2.104.0-beta.23":
-  version "2.104.0-beta.23"
-  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.104.0-beta.23.tgz#7d20bde8079aafcfa42448aaa6f88b9de40751d4"
-  integrity sha512-1xok0cxi6v63Y6jD4i3TDJ1SH7TNbaFvdSmGylNaa8b50B04Q3oPI64jKOJoy9ECdyWt2wDkOxEvw6YusGGwJA==
+"@drift-labs/sdk@2.110.0-beta.16":
+  version "2.110.0-beta.16"
+  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.110.0-beta.16.tgz#ecc4d484e7be3ce32ae201f1c3b57b8cd7dfff13"
+  integrity sha512-38nsoOLLLXsPmoRYjxUNPZbnLfbwEqvq9FNeRfHmisWIr0yvwuJqb0mm+5U2PJQNX9SuVY1ZUVhefUcfA/jOKA==
   dependencies:
     "@coral-xyz/anchor" "0.29.0"
     "@coral-xyz/anchor-30" "npm:@coral-xyz/anchor@0.30.1"
@@ -154,11 +154,13 @@
     "@switchboard-xyz/on-demand" "1.2.42"
     "@triton-one/yellowstone-grpc" "1.3.0"
     anchor-bankrun "0.3.0"
+    nanoid "3.3.4"
     node-cache "5.1.2"
     rpc-websockets "7.5.1"
     solana-bankrun "0.3.1"
     strict-event-emitter-types "2.0.0"
     tweetnacl "1.0.3"
+    tweetnacl-util "0.15.1"
     uuid "8.3.2"
     yargs "17.7.2"
     zstddec "0.1.0"
@@ -2399,6 +2401,11 @@ nanoid@3.3.1:
   resolved "https://registry.npmjs.org/nanoid/-/nanoid-3.3.1.tgz"
   integrity sha512-n6Vs/3KGyxPQd6uO0eH4Bv0ojGSUvuLlIHtC3Y0kEO23YRge8H9x1GCzLn28YX0H66pMkxuaeESFq4tKISKwdw==
 
+nanoid@3.3.4:
+  version "3.3.4"
+  resolved "https://registry.yarnpkg.com/nanoid/-/nanoid-3.3.4.tgz#730b67e3cd09e2deacf03c027c81c9d9dbc5e8ab"
+  integrity sha512-MqBkQh/OHTS2egovRtLk45wEyNXwF+cokD+1YPf9u5VfJiRdAiRwB2froX5Co9Rh20xs4siNPm8naNotSD6RBw==
+
 natural-compare@^1.4.0:
   version "1.4.0"
   resolved "https://registry.npmjs.org/natural-compare/-/natural-compare-1.4.0.tgz"
@@ -2994,6 +3001,11 @@ tsutils@^3.21.0:
   integrity sha512-mHKK3iUXL+3UF6xL5k0PEhKRUBKPBCv/+RkEOpjRWxxx27KKRBmmA60A9pgOUvMi8GKhRMPEmjBRPzs2W7O1OA==
   dependencies:
     tslib "^1.8.1"
+
+tweetnacl-util@0.15.1:
+  version "0.15.1"
+  resolved "https://registry.yarnpkg.com/tweetnacl-util/-/tweetnacl-util-0.15.1.tgz#b80fcdb5c97bcc508be18c44a4be50f022eea00b"
+  integrity sha512-RKJBIj8lySrShN4w6i/BonWp2Z/uxwC3h4y7xsRrpP59ZboCd0GpEVsOnMDYLMmKBpYhb5TgHzZXy7wTfYFBRw==
 
 tweetnacl@1.0.3:
   version "1.0.3"
