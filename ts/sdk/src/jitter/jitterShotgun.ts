@@ -114,7 +114,7 @@ export class JitterShotgun extends BaseJitter {
 		};
 	}
 
-	createTrySwiftFill(
+	createTrySignedMsgFill(
 		authorityToUse: PublicKey,
 		signedMsgOrderParams: SignedMsgOrderParams,
 		uuid: Uint8Array,
@@ -148,7 +148,7 @@ export class JitterShotgun extends BaseJitter {
 
 				console.log(`Trying to fill ${orderSignature}`);
 				try {
-					const { txSig } = await this.jitProxyClient.jitSwift(
+					const { txSig } = await this.jitProxyClient.jitSignedMsg(
 						{
 							takerKey,
 							takerStatsKey,

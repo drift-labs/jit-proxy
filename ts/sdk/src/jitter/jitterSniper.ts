@@ -245,7 +245,7 @@ export class JitterSniper extends BaseJitter {
 		};
 	}
 
-	createTrySwiftFill(
+	createTrySignedMsgFill(
 		authorityToUse: PublicKey,
 		signedMsgOrderParams: SignedMsgOrderParams,
 		uuid: Uint8Array,
@@ -386,7 +386,7 @@ export class JitterSniper extends BaseJitter {
 							computeUnits: this.computeUnits,
 							computeUnitsPrice: this.computeUnitsPrice,
 						};
-						const { txSig } = await this.jitProxyClient.jitSwift(
+						const { txSig } = await this.jitProxyClient.jitSignedMsg(
 							{
 								takerKey,
 								takerStatsKey,

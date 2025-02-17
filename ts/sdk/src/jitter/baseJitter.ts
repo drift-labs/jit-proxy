@@ -89,7 +89,9 @@ export abstract class BaseJitter {
 		this.signedMsgOrderSubscriber = signedMsgOrderSubscriber;
 
 		if (this.signedMsgOrderSubscriber && !this.slotSubscriber) {
-			throw new Error('Slot subscriber is required for swift order subscriber');
+			throw new Error(
+				'Slot subscriber is required for signedMsg order subscriber'
+			);
 		}
 	}
 
@@ -189,11 +191,11 @@ export abstract class BaseJitter {
 		);
 		await this.slotSubscriber?.subscribe();
 		await this.signedMsgOrderSubscriber?.subscribe(
-			async (orderMessageRaw, swiftOrderParamsMessage) => {
-				const swiftOrderParamsBufHex = Buffer.from(
+			async (orderMessageRaw, signedMsgOrderParamsMessage) => {
+				const signedMsgOrderParamsBufHex = Buffer.from(
 					orderMessageRaw['order_message']
 				);
-				const swiftOrderParamsBuf = Buffer.from(
+				const signedMsgOrderParamsBuf = Buffer.from(
 					orderMessageRaw['order_message'],
 					'hex'
 				);
@@ -202,7 +204,7 @@ export abstract class BaseJitter {
 					subAccountId: takerSubaccountId,
 				}: SignedMsgOrderParamsMessage =
 					this.driftClient.decodeSignedMsgOrderParamsMessage(
-						swiftOrderParamsBuf
+						signedMsgOrderParamsBuf
 					);
 
 				const takerAuthority = new PublicKey(
@@ -223,11 +225,11 @@ export abstract class BaseJitter {
 					)
 				).getUserAccount();
 
-				const swiftOrder: Order = {
+				const signedMsgOrder: Order = {
 					status: OrderStatus.OPEN,
 					orderType: signedMsgOrderParams.orderType,
 					orderId: this.convertUuidToNumber(orderMessageRaw['uuid']),
-					slot: swiftOrderParamsMessage.slot,
+					slot: signedMsgOrderParamsMessage.slot,
 					marketIndex: signedMsgOrderParams.marketIndex,
 					marketType: MarketType.PERP,
 					baseAssetAmount: signedMsgOrderParams.baseAssetAmount,
@@ -251,16 +253,21 @@ export abstract class BaseJitter {
 					userOrderId: 0,
 					postedSlotTail: 0,
 				};
-				swiftOrder.price = getAuctionPrice(
-					swiftOrder,
+				signedMsgOrder.price = getAuctionPrice(
+					signedMsgOrder,
 					this.slotSubscriber?.getSlot(),
-					this.driftClient.getOracleDataForPerpMarket(swiftOrder.marketIndex)
-						.price
+					this.driftClient.getOracleDataForPerpMarket(
+						signedMsgOrder.marketIndex
+					).price
 				);
 
 				if (this.userFilter) {
 					if (
-						this.userFilter(takerUserAccount, takerUserPubkeyString, swiftOrder)
+						this.userFilter(
+							takerUserAccount,
+							takerUserPubkeyString,
+							signedMsgOrder
+						)
 					) {
 						return;
 					}
@@ -268,7 +275,7 @@ export abstract class BaseJitter {
 
 				const orderSignature = this.getOrderSignatures(
 					takerUserPubkeyString,
-					swiftOrder.orderId
+					signedMsgOrder.orderId
 				);
 
 				if (this.seenOrders.has(orderSignature)) {
@@ -280,21 +287,23 @@ export abstract class BaseJitter {
 					return;
 				}
 
-				if (!this.perpParams.has(swiftOrder.marketIndex)) {
+				if (!this.perpParams.has(signedMsgOrder.marketIndex)) {
 					return;
 				}
 
 				const perpMarketAccount = this.driftClient.getPerpMarketAccount(
-					swiftOrder.marketIndex
+					signedMsgOrder.marketIndex
 				);
-				if (swiftOrder.baseAssetAmount.lt(perpMarketAccount.amm.minOrderSize)) {
+				if (
+					signedMsgOrder.baseAssetAmount.lt(perpMarketAccount.amm.minOrderSize)
+				) {
 					return;
 				}
 
-				const promise = this.createTrySwiftFill(
+				const promise = this.createTrySignedMsgFill(
 					signingAuthority,
 					{
-						orderParams: swiftOrderParamsBufHex,
+						orderParams: signedMsgOrderParamsBufHex,
 						signature: Buffer.from(
 							orderMessageRaw['order_signature'],
 							'base64'
@@ -307,7 +316,7 @@ export abstract class BaseJitter {
 						this.driftClient.program.programId,
 						takerUserAccount.authority
 					),
-					swiftOrder,
+					signedMsgOrder,
 					orderSignature,
 					orderMessageRaw['market_index']
 				).bind(this)();
@@ -326,7 +335,7 @@ export abstract class BaseJitter {
 		throw new Error('Not implemented');
 	}
 
-	createTrySwiftFill(
+	createTrySignedMsgFill(
 		authorityToUse: PublicKey,
 		signedMsgOrderParams: SignedMsgOrderParams,
 		uuid: Uint8Array,

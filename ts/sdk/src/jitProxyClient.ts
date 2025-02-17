@@ -40,7 +40,7 @@ export type JitIxParams = {
 	subAccountId?: number;
 };
 
-export type JitSwiftIxParams = JitIxParams & {
+export type JitSignedMsgIxParams = JitIxParams & {
 	authorityToUse: PublicKey;
 	signedMsgOrderParams: SignedMsgOrderParams;
 	uuid: Uint8Array;
@@ -83,8 +83,8 @@ export class JitProxyClient {
 		return await this.driftClient.sendTransaction(tx);
 	}
 
-	public async jitSwift(
-		params: JitSwiftIxParams,
+	public async jitSignedMsg(
+		params: JitSignedMsgIxParams,
 		computeBudgetParams?: {
 			computeUnits: number;
 			computeUnitsPrice: number;
@@ -99,7 +99,7 @@ export class JitProxyClient {
 			}),
 		];
 
-		const swiftTakerIxs =
+		const signedMsgTakerIxs =
 			await this.driftClient.getPlaceSignedMsgTakerPerpOrderIxs(
 				params.signedMsgOrderParams,
 				params.marketIndex,
@@ -111,9 +111,9 @@ export class JitProxyClient {
 				},
 				ixs
 			);
-		ixs.push(...swiftTakerIxs);
+		ixs.push(...signedMsgTakerIxs);
 
-		const ix = await this.getJitSwiftIx(params);
+		const ix = await this.getJitSignedMsgIx(params);
 		ixs.push(ix);
 
 		const v0Message = new TransactionMessage({
@@ -207,7 +207,7 @@ export class JitProxyClient {
 			.instruction();
 	}
 
-	public async getJitSwiftIx({
+	public async getJitSignedMsgIx({
 		takerKey,
 		takerStatsKey,
 		taker,
@@ -221,7 +221,7 @@ export class JitProxyClient {
 		subAccountId,
 		uuid,
 		marketIndex,
-	}: JitSwiftIxParams): Promise<TransactionInstruction> {
+	}: JitSignedMsgIxParams): Promise<TransactionInstruction> {
 		subAccountId =
 			subAccountId !== undefined
 				? subAccountId
