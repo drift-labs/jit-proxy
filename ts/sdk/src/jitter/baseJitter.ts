@@ -14,18 +14,16 @@ import {
 	MarketType,
 	Order,
 	OrderStatus,
-	OrderTriggerCondition,
-	OrderType,
 	PositionDirection,
 	PostOnlyParams,
+	SignedMsgOrderSubscriber,
 	SlotSubscriber,
-	SwiftOrderParamsMessage,
-	SwiftOrderSubscriber,
+	SignedMsgOrderParams,
 	UserAccount,
 	UserStatsMap,
 	ZERO,
+	SignedMsgOrderParamsMessage,
 } from '@drift-labs/sdk';
-import { SignedSwiftOrderParams } from '@drift-labs/sdk/lib/node/swift/types';
 import { decodeUTF8 } from 'tweetnacl-util';
 
 export type UserFilter = (
@@ -46,7 +44,7 @@ export type JitParams = {
 
 export abstract class BaseJitter {
 	auctionSubscriber: AuctionSubscriber;
-	swiftOrderSubscriber: SwiftOrderSubscriber;
+	signedMsgOrderSubscriber: SignedMsgOrderSubscriber;
 	slotSubscriber: SlotSubscriber;
 	driftClient: DriftClient;
 	jitProxyClient: JitProxyClient;
@@ -68,14 +66,14 @@ export abstract class BaseJitter {
 		jitProxyClient,
 		driftClient,
 		userStatsMap,
-		swiftOrderSubscriber,
+		signedMsgOrderSubscriber,
 		slotSubscriber,
 	}: {
 		driftClient: DriftClient;
 		auctionSubscriber: AuctionSubscriber;
 		jitProxyClient: JitProxyClient;
 		userStatsMap: UserStatsMap;
-		swiftOrderSubscriber?: SwiftOrderSubscriber;
+		signedMsgOrderSubscriber?: SignedMsgOrderSubscriber;
 		slotSubscriber?: SlotSubscriber;
 	}) {
 		this.auctionSubscriber = auctionSubscriber;
@@ -88,9 +86,9 @@ export abstract class BaseJitter {
 				new BulkAccountLoader(this.driftClient.connection, 'confirmed', 0)
 			);
 		this.slotSubscriber = slotSubscriber;
-		this.swiftOrderSubscriber = swiftOrderSubscriber;
+		this.signedMsgOrderSubscriber = signedMsgOrderSubscriber;
 
-		if (this.swiftOrderSubscriber && !this.slotSubscriber) {
+		if (this.signedMsgOrderSubscriber && !this.slotSubscriber) {
 			throw new Error('Slot subscriber is required for swift order subscriber');
 		}
 	}
@@ -190,7 +188,7 @@ export abstract class BaseJitter {
 			}
 		);
 		await this.slotSubscriber?.subscribe();
-		await this.swiftOrderSubscriber?.subscribe(
+		await this.signedMsgOrderSubscriber?.subscribe(
 			async (orderMessageRaw, swiftOrderParamsMessage) => {
 				const swiftOrderParamsBufHex = Buffer.from(
 					orderMessageRaw['order_message']
@@ -200,10 +198,12 @@ export abstract class BaseJitter {
 					'hex'
 				);
 				const {
-					swiftOrderParams,
+					signedMsgOrderParams,
 					subAccountId: takerSubaccountId,
-				}: SwiftOrderParamsMessage =
-					this.driftClient.decodeSwiftOrderParamsMessage(swiftOrderParamsBuf);
+				}: SignedMsgOrderParamsMessage =
+					this.driftClient.decodeSignedMsgOrderParamsMessage(
+						swiftOrderParamsBuf
+					);
 
 				const takerAuthority = new PublicKey(
 					orderMessageRaw['taker_authority']
@@ -218,29 +218,29 @@ export abstract class BaseJitter {
 				);
 				const takerUserPubkeyString = takerUserPubkey.toBase58();
 				const takerUserAccount = (
-					await this.swiftOrderSubscriber.userMap.mustGet(
+					await this.signedMsgOrderSubscriber.userMap.mustGet(
 						takerUserPubkey.toString()
 					)
 				).getUserAccount();
 
 				const swiftOrder: Order = {
 					status: OrderStatus.OPEN,
-					orderType: swiftOrderParams.orderType,
+					orderType: signedMsgOrderParams.orderType,
 					orderId: this.convertUuidToNumber(orderMessageRaw['uuid']),
 					slot: swiftOrderParamsMessage.slot,
-					marketIndex: swiftOrderParams.marketIndex,
+					marketIndex: signedMsgOrderParams.marketIndex,
 					marketType: MarketType.PERP,
-					baseAssetAmount: swiftOrderParams.baseAssetAmount,
-					auctionDuration: swiftOrderParams.auctionDuration!,
-					auctionStartPrice: swiftOrderParams.auctionStartPrice!,
-					auctionEndPrice: swiftOrderParams.auctionEndPrice!,
-					immediateOrCancel: swiftOrderParams.immediateOrCancel,
-					direction: swiftOrderParams.direction,
+					baseAssetAmount: signedMsgOrderParams.baseAssetAmount,
+					auctionDuration: signedMsgOrderParams.auctionDuration!,
+					auctionStartPrice: signedMsgOrderParams.auctionStartPrice!,
+					auctionEndPrice: signedMsgOrderParams.auctionEndPrice!,
+					immediateOrCancel: signedMsgOrderParams.immediateOrCancel,
+					direction: signedMsgOrderParams.direction,
 					postOnly: false,
-					oraclePriceOffset: swiftOrderParams.oraclePriceOffset ?? 0,
-					maxTs: swiftOrderParams.maxTs ?? ZERO,
-					reduceOnly: swiftOrderParams.reduceOnly,
-					triggerCondition: swiftOrderParams.triggerCondition,
+					oraclePriceOffset: signedMsgOrderParams.oraclePriceOffset ?? 0,
+					maxTs: signedMsgOrderParams.maxTs ?? ZERO,
+					reduceOnly: signedMsgOrderParams.reduceOnly,
+					triggerCondition: signedMsgOrderParams.triggerCondition,
 					// Rest are not necessary and set for type conforming
 					price: ZERO,
 					existingPositionDirection: PositionDirection.LONG,
@@ -328,7 +328,7 @@ export abstract class BaseJitter {
 
 	createTrySwiftFill(
 		authorityToUse: PublicKey,
-		signedSwiftOrderParams: SignedSwiftOrderParams,
+		signedMsgOrderParams: SignedMsgOrderParams,
 		uuid: Uint8Array,
 		taker: UserAccount,
 		takerKey: PublicKey,

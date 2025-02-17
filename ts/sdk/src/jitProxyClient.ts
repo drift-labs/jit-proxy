@@ -1,13 +1,14 @@
 import {
 	BN,
 	DriftClient,
-	getSwiftUserAccountPublicKey,
+	getSignedMsgUserAccountPublicKey,
 	isVariant,
 	MakerInfo,
 	MarketType,
 	PostOnlyParams,
 	QUOTE_SPOT_MARKET_INDEX,
 	ReferrerInfo,
+	SignedMsgOrderParams,
 	TxParams,
 	UserAccount,
 } from '@drift-labs/sdk';
@@ -21,7 +22,6 @@ import {
 } from '@solana/web3.js';
 import { Program } from '@coral-xyz/anchor';
 import { TxSigAndSlot } from '@drift-labs/sdk';
-import { SignedSwiftOrderParams } from '@drift-labs/sdk/lib/node/swift/types';
 
 export const DEFAULT_CU_LIMIT = 1_400_000;
 
@@ -42,7 +42,7 @@ export type JitIxParams = {
 
 export type JitSwiftIxParams = JitIxParams & {
 	authorityToUse: PublicKey;
-	signedSwiftOrderParams: SignedSwiftOrderParams;
+	signedMsgOrderParams: SignedMsgOrderParams;
 	uuid: Uint8Array;
 	marketIndex: number;
 };
@@ -99,17 +99,18 @@ export class JitProxyClient {
 			}),
 		];
 
-		const swiftTakerIxs = await this.driftClient.getPlaceSwiftTakerPerpOrderIxs(
-			params.signedSwiftOrderParams,
-			params.marketIndex,
-			{
-				taker: params.takerKey,
-				takerStats: params.takerStatsKey,
-				takerUserAccount: params.taker,
-				signingAuthority: params.authorityToUse,
-			},
-			ixs
-		);
+		const swiftTakerIxs =
+			await this.driftClient.getPlaceSignedMsgTakerPerpOrderIxs(
+				params.signedMsgOrderParams,
+				params.marketIndex,
+				{
+					taker: params.takerKey,
+					takerStats: params.takerStatsKey,
+					takerUserAccount: params.taker,
+					signingAuthority: params.authorityToUse,
+				},
+				ixs
+			);
 		ixs.push(...swiftTakerIxs);
 
 		const ix = await this.getJitSwiftIx(params);
@@ -244,8 +245,8 @@ export class JitProxyClient {
 			});
 		}
 
-		const jitSwiftParams = {
-			swiftOrderUuid: Array.from(uuid),
+		const jitSignedMsgParams = {
+			signedMsgOrderUuid: Array.from(uuid),
 			maxPosition,
 			minPosition,
 			bid,
@@ -255,11 +256,11 @@ export class JitProxyClient {
 		};
 
 		return this.program.methods
-			.jitSwift(jitSwiftParams)
+			.jitSignedMsg(jitSignedMsgParams)
 			.accounts({
 				taker: takerKey,
 				takerStats: takerStatsKey,
-				takerSwiftUserOrders: getSwiftUserAccountPublicKey(
+				takerSignedMsgUserOrders: getSignedMsgUserAccountPublicKey(
 					this.driftClient.program.programId,
 					taker.authority
 				),

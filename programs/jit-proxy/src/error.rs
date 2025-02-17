@@ -24,5 +24,5 @@ pub enum ErrorCode {
     #[msg("NoFill")]
     NoFill,
     #[msg("SwiftOrderDoesNotExist")]
-    SwiftOrderDoesNotExist,
+    SignedMsgOrderDoesNotExist,
 }

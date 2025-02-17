@@ -51,7 +51,7 @@ export type JitProxy = {
 			];
 		},
 		{
-			name: 'jitSwift';
+			name: 'jitSignedMsg';
 			accounts: [
 				{
 					name: 'state';
@@ -79,7 +79,7 @@ export type JitProxy = {
 					isSigner: false;
 				},
 				{
-					name: 'takerSwiftUserOrders';
+					name: 'takerSignedMsgUserOrders';
 					isMut: true;
 					isSigner: false;
 				},
@@ -98,7 +98,7 @@ export type JitProxy = {
 				{
 					name: 'params';
 					type: {
-						defined: 'JitSwiftParams';
+						defined: 'JitSignedMsgParams';
 					};
 				}
 			];
@@ -230,12 +230,12 @@ export type JitProxy = {
 			};
 		},
 		{
-			name: 'JitSwiftParams';
+			name: 'JitSignedMsgParams';
 			type: {
 				kind: 'struct';
 				fields: [
 					{
-						name: 'swiftOrderUuid';
+						name: 'signedMsgOrderUuid';
 						type: {
 							array: ['u8', 8];
 						};
@@ -375,8 +375,8 @@ export type JitProxy = {
 		},
 		{
 			code: 6010;
-			name: 'SwiftOrderDoesNotExist';
-			msg: 'SwiftOrderDoesNotExist';
+			name: 'SignedMsgOrderDoesNotExist';
+			msg: 'SignedMsgOrderDoesNotExist';
 		}
 	];
 };
@@ -434,7 +434,7 @@ export const IDL: JitProxy = {
 			],
 		},
 		{
-			name: 'jitSwift',
+			name: 'jitSignedMsg',
 			accounts: [
 				{
 					name: 'state',
@@ -462,7 +462,7 @@ export const IDL: JitProxy = {
 					isSigner: false,
 				},
 				{
-					name: 'takerSwiftUserOrders',
+					name: 'takerSignedMsgUserOrders',
 					isMut: true,
 					isSigner: false,
 				},
@@ -481,7 +481,7 @@ export const IDL: JitProxy = {
 				{
 					name: 'params',
 					type: {
-						defined: 'JitSwiftParams',
+						defined: 'JitSignedMsgParams',
 					},
 				},
 			],
@@ -613,12 +613,12 @@ export const IDL: JitProxy = {
 			},
 		},
 		{
-			name: 'JitSwiftParams',
+			name: 'JitSignedMsgParams',
 			type: {
 				kind: 'struct',
 				fields: [
 					{
-						name: 'swiftOrderUuid',
+						name: 'signedMsgOrderUuid',
 						type: {
 							array: ['u8', 8],
 						},
@@ -758,8 +758,8 @@ export const IDL: JitProxy = {
 		},
 		{
 			code: 6010,
-			name: 'SwiftOrderDoesNotExist',
-			msg: 'SwiftOrderDoesNotExist',
+			name: 'SignedMsgOrderDoesNotExist',
+			msg: 'SignedMsgOrderDoesNotExist',
 		},
 	],
 };

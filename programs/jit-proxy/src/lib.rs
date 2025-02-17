@@ -19,11 +19,11 @@ pub mod jit_proxy {
         instructions::jit(ctx, params)
     }
 
-    pub fn jit_swift<'c: 'info, 'info>(
-        ctx: Context<'_, '_, 'c, 'info, JitSwift<'info>>,
-        params: JitSwiftParams,
+    pub fn jit_signed_msg<'c: 'info, 'info>(
+        ctx: Context<'_, '_, 'c, 'info, JitSignedMsg<'info>>,
+        params: JitSignedMsgParams,
     ) -> Result<()> {
-        instructions::jit_swift(ctx, params)
+        instructions::jit_signed_msg(ctx, params)
     }
 
     pub fn check_order_constraints<'c: 'info, 'info>(
