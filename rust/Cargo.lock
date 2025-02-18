@@ -1414,7 +1414,6 @@ dependencies = [
  "drift-pubsub-client",
  "env_logger 0.11.6",
  "futures-util",
- "goblin",
  "hex",
  "log",
  "regex",
@@ -1428,6 +1427,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-tungstenite",
+ "type-layout",
 ]
 
 [[package]]
@@ -2953,7 +2953,7 @@ version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d6ea3c4595b96363c13943497db34af4460fb474a95c43f4446ad341b8c9785"
 dependencies = [
- "toml 0.5.11",
+ "toml",
 ]
 
 [[package]]
@@ -3045,7 +3045,6 @@ checksum = "e46f3055866785f6b92bc6164b76be02ca8f2eb4b002c0354b28cf4c119e5944"
 dependencies = [
  "cfg_aliases",
  "libc",
- "once_cell",
  "socket2",
  "tracing",
  "windows-sys 0.52.0",
@@ -4580,7 +4579,10 @@ dependencies = [
  "serde",
  "serde_derive",
  "socket2",
- "solana-serde",
+ "solana-logger",
+ "solana-sdk",
+ "solana-version",
+ "static_assertions",
  "tokio",
  "url",
 ]
@@ -6641,9 +6643,6 @@ name = "toml_datetime"
 version = "0.6.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0dd7358ecb8fc2f8d014bf86f6f638ce72ba252a2c3a2572f2a795f1d23efb41"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "toml_edit"
