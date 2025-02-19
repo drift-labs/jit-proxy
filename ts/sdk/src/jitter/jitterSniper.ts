@@ -14,7 +14,7 @@ import {
 	PostOnlyParams,
 	PRICE_PRECISION,
 	SignedMsgOrderParams,
-	SignedMsgOrderSubscriber,
+	FastlaneOrderSubscriber,
 	SlotSubscriber,
 	UserAccount,
 	UserStatsMap,
@@ -43,21 +43,21 @@ export class JitterSniper extends BaseJitter {
 		jitProxyClient,
 		driftClient,
 		userStatsMap,
-		signedMsgOrderSubscriber,
+		fastlaneOrderSubscriber,
 	}: {
 		driftClient: DriftClient;
 		slotSubscriber: SlotSubscriber;
 		auctionSubscriber: AuctionSubscriber;
 		jitProxyClient: JitProxyClient;
 		userStatsMap?: UserStatsMap;
-		signedMsgOrderSubscriber?: SignedMsgOrderSubscriber;
+		fastlaneOrderSubscriber?: FastlaneOrderSubscriber;
 	}) {
 		super({
 			auctionSubscriber,
 			jitProxyClient,
 			driftClient,
 			userStatsMap,
-			signedMsgOrderSubscriber,
+			fastlaneOrderSubscriber,
 			slotSubscriber,
 		});
 		this.slotSubscriber = slotSubscriber;

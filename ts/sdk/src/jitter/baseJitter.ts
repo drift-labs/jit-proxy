@@ -16,7 +16,7 @@ import {
 	OrderStatus,
 	PositionDirection,
 	PostOnlyParams,
-	SignedMsgOrderSubscriber,
+	FastlaneOrderSubscriber,
 	SlotSubscriber,
 	SignedMsgOrderParams,
 	UserAccount,
@@ -44,7 +44,7 @@ export type JitParams = {
 
 export abstract class BaseJitter {
 	auctionSubscriber: AuctionSubscriber;
-	signedMsgOrderSubscriber: SignedMsgOrderSubscriber;
+	fastlaneOrderSubscriber: FastlaneOrderSubscriber;
 	slotSubscriber: SlotSubscriber;
 	driftClient: DriftClient;
 	jitProxyClient: JitProxyClient;
@@ -66,14 +66,14 @@ export abstract class BaseJitter {
 		jitProxyClient,
 		driftClient,
 		userStatsMap,
-		signedMsgOrderSubscriber,
+		fastlaneOrderSubscriber,
 		slotSubscriber,
 	}: {
 		driftClient: DriftClient;
 		auctionSubscriber: AuctionSubscriber;
 		jitProxyClient: JitProxyClient;
 		userStatsMap: UserStatsMap;
-		signedMsgOrderSubscriber?: SignedMsgOrderSubscriber;
+		fastlaneOrderSubscriber?: FastlaneOrderSubscriber;
 		slotSubscriber?: SlotSubscriber;
 	}) {
 		this.auctionSubscriber = auctionSubscriber;
@@ -86,9 +86,9 @@ export abstract class BaseJitter {
 				new BulkAccountLoader(this.driftClient.connection, 'confirmed', 0)
 			);
 		this.slotSubscriber = slotSubscriber;
-		this.signedMsgOrderSubscriber = signedMsgOrderSubscriber;
+		this.fastlaneOrderSubscriber = fastlaneOrderSubscriber;
 
-		if (this.signedMsgOrderSubscriber && !this.slotSubscriber) {
+		if (this.fastlaneOrderSubscriber && !this.slotSubscriber) {
 			throw new Error(
 				'Slot subscriber is required for signedMsg order subscriber'
 			);
@@ -190,7 +190,7 @@ export abstract class BaseJitter {
 			}
 		);
 		await this.slotSubscriber?.subscribe();
-		await this.signedMsgOrderSubscriber?.subscribe(
+		await this.fastlaneOrderSubscriber?.subscribe(
 			async (orderMessageRaw, signedMsgOrderParamsMessage) => {
 				const signedMsgOrderParamsBufHex = Buffer.from(
 					orderMessageRaw['order_message']
@@ -220,7 +220,7 @@ export abstract class BaseJitter {
 				);
 				const takerUserPubkeyString = takerUserPubkey.toBase58();
 				const takerUserAccount = (
-					await this.signedMsgOrderSubscriber.userMap.mustGet(
+					await this.fastlaneOrderSubscriber.userMap.mustGet(
 						takerUserPubkey.toString()
 					)
 				).getUserAccount();

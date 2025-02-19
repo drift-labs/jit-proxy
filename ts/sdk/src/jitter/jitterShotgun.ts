@@ -7,7 +7,7 @@ import {
 	PostOnlyParams,
 	SlotSubscriber,
 	SignedMsgOrderParams,
-	SignedMsgOrderSubscriber,
+	FastlaneOrderSubscriber,
 	UserAccount,
 	UserStatsMap,
 } from '@drift-labs/sdk';
@@ -19,14 +19,14 @@ export class JitterShotgun extends BaseJitter {
 		jitProxyClient,
 		driftClient,
 		userStatsMap,
-		signedMsgOrderSubscriber,
+		fastlaneOrderSubscriber,
 		slotSubscriber,
 	}: {
 		driftClient: DriftClient;
 		auctionSubscriber: AuctionSubscriber;
 		jitProxyClient: JitProxyClient;
 		userStatsMap?: UserStatsMap;
-		signedMsgOrderSubscriber?: SignedMsgOrderSubscriber;
+		fastlaneOrderSubscriber?: FastlaneOrderSubscriber;
 		slotSubscriber?: SlotSubscriber;
 	}) {
 		super({
@@ -34,7 +34,7 @@ export class JitterShotgun extends BaseJitter {
 			jitProxyClient,
 			driftClient,
 			userStatsMap,
-			signedMsgOrderSubscriber,
+			fastlaneOrderSubscriber,
 			slotSubscriber,
 		});
 	}
