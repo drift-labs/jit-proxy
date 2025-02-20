@@ -1,64 +1,56 @@
+//! Simple example JIT(er)
+//!
+//! It watches jit auctions and fastlane orders, and tries to fill them using the jit-proxy program.
+//! jit-proxy program will ensure fills at set prices and max/min positions (otherwise fail)
+//! prices are set at a fixed margin from oracle, fills are attempted every slot until an auction is complete
+//!
+//! This is provided as an example of the overall flow of JITing, a successful jit maker will require tuning
+//! for optimal prices and tx inclusion.
+//!
 use std::env;
 
-use dotenv::dotenv;
 use drift_rs::{
     event_subscriber::RpcClient,
-    jit_client::{ComputeBudgetParams, PriceType},
+    jit_client::{ComputeBudgetParams, JitIxParams, PriceType},
     types::{CommitmentConfig, Context, RpcSendTransactionConfig},
     utils::get_ws_url,
-    DriftClient,
+    DriftClient, Wallet,
 };
-use solana_sdk::signature::Keypair;
-
-use crate::jitter::{JitParams, Jitter};
 
 pub mod jitter;
 pub mod types;
 
+use crate::jitter::Jitter;
+
 #[tokio::main]
 async fn main() {
     env_logger::init();
-    dotenv().ok();
 
     let rpc_url = env::var("RPC_URL").expect("RPC_KEY must be set");
     let private_key = env::var("PRIVATE_KEY").expect("PRIVATE_KEY must be set");
-
-    let pk_vec: Vec<u8> = private_key
-        .trim_matches(|c| c == '[' || c == ']')
-        .split(',')
-        .map(|s| s.trim().parse::<u8>().expect("Failed to parse u8"))
-        .collect();
-
-    let pk_bytes: &[u8] = &pk_vec;
-    let keypair = Keypair::from_bytes(pk_bytes).unwrap();
+    let wallet = Wallet::try_from_str(&private_key).expect("loaded wallet");
 
     let drift_client = DriftClient::new(
         Context::MainNet,
         RpcClient::new_with_commitment(rpc_url.clone(), CommitmentConfig::finalized()),
-        keypair.into(),
+        wallet,
     )
     .await
     .unwrap();
 
     let config = RpcSendTransactionConfig::default();
-
     let cu_params = ComputeBudgetParams::new(100_000, 1_400_000);
+    let jitter = Jitter::new_with_shotgun(drift_client.clone(), Some(config), Some(cu_params));
+    // some fixed width from oracle
+    // IRL adjust per market and requirements
+    let jit_params = JitIxParams::new(0, 0, -1_000_000, 1_000_000, PriceType::Oracle, None);
 
-    let jitter = Jitter::new_with_shotgun(drift_client, Some(config), Some(cu_params));
-
-    let jit_params = JitParams::new(0, 0, -1_000_000, 1_000_000, PriceType::Oracle);
-
-    jitter.update_perp_params(0, jit_params.clone());
-    jitter.update_perp_params(1, jit_params.clone());
-    jitter.update_perp_params(2, jit_params.clone());
-    jitter.update_perp_params(3, jit_params.clone());
-    jitter.update_perp_params(4, jit_params.clone());
-    jitter.update_perp_params(5, jit_params.clone());
-    jitter.update_perp_params(6, jit_params.clone());
-    jitter.update_perp_params(7, jit_params.clone());
-    jitter.update_perp_params(8, jit_params.clone());
-    jitter.update_perp_params(9, jit_params.clone());
-    jitter.update_perp_params(10, jit_params.clone());
+    // try to JIT make on the first 10 perp markets
+    for market_idx in 0..=10 {
+        jitter.update_perp_params(market_idx, jit_params.clone());
+    }
+    let fwog_perp = drift_client.market_lookup("fwog-perp").unwrap();
+    jitter.update_perp_params(fwog_perp.index(), jit_params.clone());
 
     jitter
         .subscribe(get_ws_url(&rpc_url).expect("valid RPC url"))
