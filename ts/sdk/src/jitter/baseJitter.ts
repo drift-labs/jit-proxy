@@ -225,11 +225,15 @@ export abstract class BaseJitter {
 					)
 				).getUserAccount();
 
+				const orderSlot = Math.min(
+					signedMsgOrderParamsMessage.slot.toNumber(),
+					this.slotSubscriber.getSlot()
+				);
 				const signedMsgOrder: Order = {
 					status: OrderStatus.OPEN,
 					orderType: signedMsgOrderParams.orderType,
 					orderId: this.convertUuidToNumber(orderMessageRaw['uuid']),
-					slot: signedMsgOrderParamsMessage.slot,
+					slot: new BN(orderSlot),
 					marketIndex: signedMsgOrderParams.marketIndex,
 					marketType: MarketType.PERP,
 					baseAssetAmount: signedMsgOrderParams.baseAssetAmount,
