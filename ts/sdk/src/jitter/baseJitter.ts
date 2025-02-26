@@ -195,17 +195,9 @@ export abstract class BaseJitter {
 				const signedMsgOrderParamsBufHex = Buffer.from(
 					orderMessageRaw['order_message']
 				);
-				const signedMsgOrderParamsBuf = Buffer.from(
-					orderMessageRaw['order_message'],
-					'hex'
-				);
-				const {
-					signedMsgOrderParams,
-					subAccountId: takerSubaccountId,
-				}: SignedMsgOrderParamsMessage =
-					this.driftClient.decodeSignedMsgOrderParamsMessage(
-						signedMsgOrderParamsBuf
-					);
+				const signedMsgOrderParams =
+					signedMsgOrderParamsMessage.signedMsgOrderParams;
+				const takerSubaccountId = signedMsgOrderParamsMessage.subAccountId;
 
 				const takerAuthority = new PublicKey(
 					orderMessageRaw['taker_authority']
