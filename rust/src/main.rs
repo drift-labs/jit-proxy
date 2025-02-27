@@ -26,7 +26,7 @@ use crate::jitter::Jitter;
 async fn main() {
     env_logger::init();
 
-    let rpc_url = env::var("RPC_URL").expect("RPC_KEY must be set");
+    let rpc_url = env::var("RPC_URL").expect("RPC_URL must be set");
     let private_key = env::var("PRIVATE_KEY").expect("PRIVATE_KEY must be set");
     let wallet = Wallet::try_from_str(&private_key).expect("loaded wallet");
 
