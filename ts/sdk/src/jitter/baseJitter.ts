@@ -23,6 +23,7 @@ import {
 	UserStatsMap,
 	ZERO,
 	SignedMsgOrderParamsMessage,
+	isSignedMsgOrder,
 } from '@drift-labs/sdk';
 import { decodeUTF8 } from 'tweetnacl-util';
 
@@ -48,6 +49,7 @@ export abstract class BaseJitter {
 	slotSubscriber: SlotSubscriber;
 	driftClient: DriftClient;
 	jitProxyClient: JitProxyClient;
+	auctionSubscriberIgnoresFastlaneOrders?: boolean;
 	userStatsMap: UserStatsMap;
 
 	perpParams = new Map<number, JitParams>();
@@ -68,6 +70,7 @@ export abstract class BaseJitter {
 		userStatsMap,
 		fastlaneOrderSubscriber,
 		slotSubscriber,
+		auctionSubscriberIgnoresFastlaneOrders,
 	}: {
 		driftClient: DriftClient;
 		auctionSubscriber: AuctionSubscriber;
@@ -75,6 +78,7 @@ export abstract class BaseJitter {
 		userStatsMap: UserStatsMap;
 		fastlaneOrderSubscriber?: FastlaneOrderSubscriber;
 		slotSubscriber?: SlotSubscriber;
+		auctionSubscriberIgnoresFastlaneOrders?: boolean;
 	}) {
 		this.auctionSubscriber = auctionSubscriber;
 		this.driftClient = driftClient;
@@ -87,6 +91,8 @@ export abstract class BaseJitter {
 			);
 		this.slotSubscriber = slotSubscriber;
 		this.fastlaneOrderSubscriber = fastlaneOrderSubscriber;
+		this.auctionSubscriberIgnoresFastlaneOrders =
+			auctionSubscriberIgnoresFastlaneOrders;
 
 		if (this.fastlaneOrderSubscriber && !this.slotSubscriber) {
 			throw new Error(
@@ -114,6 +120,13 @@ export abstract class BaseJitter {
 					}
 
 					if (!hasAuctionPrice(order, slot)) {
+						continue;
+					}
+
+					if (
+						this.auctionSubscriberIgnoresFastlaneOrders &&
+						isSignedMsgOrder(order)
+					) {
 						continue;
 					}
 
@@ -239,23 +252,17 @@ export abstract class BaseJitter {
 					maxTs: signedMsgOrderParams.maxTs ?? ZERO,
 					reduceOnly: signedMsgOrderParams.reduceOnly,
 					triggerCondition: signedMsgOrderParams.triggerCondition,
+					price: signedMsgOrderParams.price,
+					userOrderId: signedMsgOrderParams.userOrderId,
 					// Rest are not necessary and set for type conforming
-					price: ZERO,
 					existingPositionDirection: PositionDirection.LONG,
 					triggerPrice: ZERO,
 					baseAssetAmountFilled: ZERO,
 					quoteAssetAmountFilled: ZERO,
 					quoteAssetAmount: ZERO,
-					userOrderId: 0,
+					bitFlags: 0,
 					postedSlotTail: 0,
 				};
-				signedMsgOrder.price = getAuctionPrice(
-					signedMsgOrder,
-					this.slotSubscriber?.getSlot(),
-					this.driftClient.getOracleDataForPerpMarket(
-						signedMsgOrder.marketIndex
-					).price
-				);
 
 				if (this.userFilter) {
 					if (
