@@ -142,7 +142,7 @@ impl Jitter {
     }
 
     // Subscribe to auction events and start listening for them
-    pub async fn subscribe(self: Arc<Self>, url: String) -> JitResult<()> {
+    pub async fn subscribe(self: Arc<Self>, url: String) -> JitResult<AuctionSubscriber> {
         // start fastlane order subscriber
         let markets = self.drift_client.get_all_perp_market_ids();
         let mut fastlane_order_stream = self
@@ -182,7 +182,7 @@ impl Jitter {
             });
         });
 
-        Ok(())
+        Ok(auction_subscriber)
     }
 
     // Process the auction event & attempt to fill with JIT if possible
