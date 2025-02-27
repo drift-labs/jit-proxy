@@ -32,7 +32,7 @@ async fn main() {
 
     let drift_client = DriftClient::new(
         Context::MainNet,
-        RpcClient::new_with_commitment(rpc_url.clone(), CommitmentConfig::finalized()),
+        RpcClient::new_with_commitment(rpc_url.clone(), CommitmentConfig::confirmed()),
         wallet,
     )
     .await
@@ -52,10 +52,11 @@ async fn main() {
     let fwog_perp = drift_client.market_lookup("fwog-perp").unwrap();
     jitter.update_perp_params(fwog_perp.index(), jit_params.clone());
 
-    jitter
+    let _auction_subscriber = jitter
         .subscribe(get_ws_url(&rpc_url).expect("valid RPC url"))
         .await
         .unwrap();
+
     let _ = tokio::signal::ctrl_c().await;
     log::info!("jitter shutting down...");
 }
