@@ -218,6 +218,10 @@ export abstract class BaseJitter {
 					return;
 				}
 
+				if (signedMsgOrderParams.baseAssetAmount.eq(ZERO)) {
+					return;
+				}
+
 				const signedMsgOrderParamsBufHex = Buffer.from(
 					orderMessageRaw['order_message']
 				);
@@ -252,10 +256,10 @@ export abstract class BaseJitter {
 					slot: new BN(orderSlot),
 					marketIndex: signedMsgOrderParams.marketIndex,
 					marketType: MarketType.PERP,
-					baseAssetAmount: signedMsgOrderParams.baseAssetAmount ?? ZERO,
-					auctionDuration: signedMsgOrderParams.auctionDuration ?? 0,
-					auctionStartPrice: signedMsgOrderParams.auctionStartPrice ?? ZERO,
-					auctionEndPrice: signedMsgOrderParams.auctionEndPrice ?? ZERO,
+					baseAssetAmount: signedMsgOrderParams.baseAssetAmount,
+					auctionDuration: signedMsgOrderParams.auctionDuration,
+					auctionStartPrice: signedMsgOrderParams.auctionStartPrice,
+					auctionEndPrice: signedMsgOrderParams.auctionEndPrice,
 					immediateOrCancel: signedMsgOrderParams.immediateOrCancel ?? false,
 					direction: signedMsgOrderParams.direction,
 					postOnly: false,
