@@ -22,8 +22,8 @@ import {
 	UserAccount,
 	UserStatsMap,
 	ZERO,
-	SignedMsgOrderParamsMessage,
 	isSignedMsgOrder,
+	OrderTriggerCondition,
 } from '@drift-labs/sdk';
 import { decodeUTF8 } from 'tweetnacl-util';
 
@@ -205,11 +205,22 @@ export abstract class BaseJitter {
 		await this.slotSubscriber?.subscribe();
 		await this.fastlaneOrderSubscriber?.subscribe(
 			async (orderMessageRaw, signedMsgOrderParamsMessage) => {
+				const signedMsgOrderParams =
+					signedMsgOrderParamsMessage.signedMsgOrderParams;
+
+				if (
+					!signedMsgOrderParams.auctionDuration ||
+					!signedMsgOrderParams.auctionStartPrice ||
+					!signedMsgOrderParams.auctionEndPrice ||
+					signedMsgOrderParams.auctionStartPrice.eq(ZERO) ||
+					signedMsgOrderParams.auctionEndPrice.eq(ZERO)
+				) {
+					return;
+				}
+
 				const signedMsgOrderParamsBufHex = Buffer.from(
 					orderMessageRaw['order_message']
 				);
-				const signedMsgOrderParams =
-					signedMsgOrderParamsMessage.signedMsgOrderParams;
 				const takerSubaccountId = signedMsgOrderParamsMessage.subAccountId;
 
 				const takerAuthority = new PublicKey(
@@ -241,19 +252,21 @@ export abstract class BaseJitter {
 					slot: new BN(orderSlot),
 					marketIndex: signedMsgOrderParams.marketIndex,
 					marketType: MarketType.PERP,
-					baseAssetAmount: signedMsgOrderParams.baseAssetAmount,
-					auctionDuration: signedMsgOrderParams.auctionDuration!,
-					auctionStartPrice: signedMsgOrderParams.auctionStartPrice!,
-					auctionEndPrice: signedMsgOrderParams.auctionEndPrice!,
-					immediateOrCancel: signedMsgOrderParams.immediateOrCancel,
+					baseAssetAmount: signedMsgOrderParams.baseAssetAmount ?? ZERO,
+					auctionDuration: signedMsgOrderParams.auctionDuration ?? 0,
+					auctionStartPrice: signedMsgOrderParams.auctionStartPrice ?? ZERO,
+					auctionEndPrice: signedMsgOrderParams.auctionEndPrice ?? ZERO,
+					immediateOrCancel: signedMsgOrderParams.immediateOrCancel ?? false,
 					direction: signedMsgOrderParams.direction,
 					postOnly: false,
 					oraclePriceOffset: signedMsgOrderParams.oraclePriceOffset ?? 0,
 					maxTs: signedMsgOrderParams.maxTs ?? ZERO,
-					reduceOnly: signedMsgOrderParams.reduceOnly,
-					triggerCondition: signedMsgOrderParams.triggerCondition,
-					price: signedMsgOrderParams.price,
-					userOrderId: signedMsgOrderParams.userOrderId,
+					reduceOnly: signedMsgOrderParams.reduceOnly ?? false,
+					triggerCondition:
+						signedMsgOrderParams.triggerCondition ??
+						OrderTriggerCondition.ABOVE,
+					price: signedMsgOrderParams.price ?? ZERO,
+					userOrderId: signedMsgOrderParams.userOrderId ?? 0,
 					// Rest are not necessary and set for type conforming
 					existingPositionDirection: PositionDirection.LONG,
 					triggerPrice: ZERO,
