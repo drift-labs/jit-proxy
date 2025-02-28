@@ -44,6 +44,7 @@ export class JitterSniper extends BaseJitter {
 		driftClient,
 		userStatsMap,
 		fastlaneOrderSubscriber,
+		auctionSubscriberIgnoresFastlaneOrders,
 	}: {
 		driftClient: DriftClient;
 		slotSubscriber: SlotSubscriber;
@@ -51,6 +52,7 @@ export class JitterSniper extends BaseJitter {
 		jitProxyClient: JitProxyClient;
 		userStatsMap?: UserStatsMap;
 		fastlaneOrderSubscriber?: FastlaneOrderSubscriber;
+		auctionSubscriberIgnoresFastlaneOrders?: boolean;
 	}) {
 		super({
 			auctionSubscriber,
@@ -59,6 +61,7 @@ export class JitterSniper extends BaseJitter {
 			userStatsMap,
 			fastlaneOrderSubscriber,
 			slotSubscriber,
+			auctionSubscriberIgnoresFastlaneOrders,
 		});
 		this.slotSubscriber = slotSubscriber;
 	}
