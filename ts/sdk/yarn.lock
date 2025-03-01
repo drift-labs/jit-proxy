@@ -128,15 +128,15 @@
     bn.js "^5.1.2"
     buffer-layout "^1.2.0"
 
-"@drift-labs/sdk@2.112.0-beta.9":
-  version "2.112.0-beta.9"
-  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.112.0-beta.9.tgz#93a0551ba6ea27da9bf1b20b907dd47876641a5e"
-  integrity sha512-EaTHqV6kBEX9L9xSW+EPQQDNB1fmf4n7SVJUJZzCwEiNWwQ92CiPlgxeIhGxDKGFmhQoog3IhxMFenhmzCKizw==
+"@drift-labs/sdk@2.112.0-beta.10":
+  version "2.112.0-beta.10"
+  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.112.0-beta.10.tgz#ed5b5db322377a86a81fce40132bd0a6bb87e165"
+  integrity sha512-fHqIlL4mZMsGTBEK81L7NlTMgu4WHGU+65NgMp1gxgCOr5iZaBir4n5Zig6Vhojilcj0Hk2AJy30xjdVqVJevg==
   dependencies:
     "@coral-xyz/anchor" "0.29.0"
     "@coral-xyz/anchor-30" "npm:@coral-xyz/anchor@0.30.1"
     "@ellipsis-labs/phoenix-sdk" "1.4.5"
-    "@grpc/grpc-js" "^1.8.0"
+    "@grpc/grpc-js" "1.12.2"
     "@openbook-dex/openbook-v2" "0.2.10"
     "@project-serum/serum" "0.13.65"
     "@pythnetwork/client" "2.5.3"
@@ -172,7 +172,7 @@
     borsh "^0.7.0"
     bs58 "^5.0.0"
 
-"@grpc/grpc-js@^1.8.0":
+"@grpc/grpc-js@1.12.2", "@grpc/grpc-js@^1.8.0":
   version "1.12.2"
   resolved "https://registry.yarnpkg.com/@grpc/grpc-js/-/grpc-js-1.12.2.tgz#97eda82dd49bb9c24eaf6434ea8d7de446e95aac"
   integrity sha512-bgxdZmgTrJZX50OjyVwz3+mNEnCTNkh3cIqGPWVNeW9jX6bn1ZkU80uPd+67/ZpIJIjRQ9qaHCjhavyoWYxumg==
