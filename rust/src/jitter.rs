@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use dashmap::DashMap;
 use drift_rs::{
     auction_subscriber::{AuctionSubscriber, AuctionSubscriberConfig},
-    fastlane_order_subscriber::SignedOrderInfo,
+    swift_order_subscriber::SignedOrderInfo,
     jit_client::{ComputeBudgetParams, JitIxParams, JitProxyClient, JitTakerParams},
     slot_subscriber::SlotSubscriber,
     types::{
@@ -95,7 +95,7 @@ pub trait JitterStrategy {
         referrer_info: Option<ReferrerInfo>,
         params: JitIxParams,
     ) -> JitResult<()>;
-    async fn try_fastlane_fill(
+    async fn try_swift_fill(
         &self,
         signed_order_info: &SignedOrderInfo,
         order_sig: String,
@@ -143,22 +143,22 @@ impl Jitter {
 
     // Subscribe to auction events and start listening for them
     pub async fn subscribe(self: Arc<Self>, url: String) -> JitResult<AuctionSubscriber> {
-        // start fastlane order subscriber
+        // start swift order subscriber
         let markets = self.drift_client.get_all_perp_market_ids();
-        let mut fastlane_order_stream = self
+        let mut swift_order_stream = self
             .drift_client
-            .subscribe_fastlane_orders(&markets)
+            .subscribe_swift_orders(&markets)
             .await
             .map_err(|err| {
-                log::warn!("failed to start fastlane subscriber: {err:?}");
+                log::warn!("failed to start swift subscriber: {err:?}");
                 JitError::Sdk(err.to_string())
             })?;
 
         let self_ref = Arc::clone(&self);
         tokio::spawn(async move {
-            while let Some(signed_order_info) = fastlane_order_stream.next().await {
-                if let Err(err) = self_ref.on_fastlane_order(signed_order_info).await {
-                    log::warn!("processing fastlane order failed: {err:?}");
+            while let Some(signed_order_info) = swift_order_stream.next().await {
+                if let Err(err) = self_ref.on_swift_order(signed_order_info).await {
+                    log::warn!("processing swift order failed: {err:?}");
                 }
             }
         });
@@ -333,8 +333,8 @@ impl Jitter {
         Ok(())
     }
 
-    // Process the fastlane order & attempt to fill if possible
-    pub async fn on_fastlane_order(&self, signed_order_info: SignedOrderInfo) -> JitResult<()> {
+    // Process the swift order & attempt to fill if possible
+    pub async fn on_swift_order(&self, signed_order_info: SignedOrderInfo) -> JitResult<()> {
         log::info!("Signed order received");
         let taker_authority = &signed_order_info.taker_authority;
         let taker_pubkey =
@@ -363,7 +363,7 @@ impl Jitter {
 
         match order.market_type {
             MarketType::Spot => {
-                log::warn!("spot market fastlane unimplemented");
+                log::warn!("spot market swift unimplemented");
                 return Ok(());
             }
             MarketType::Perp => {
@@ -401,7 +401,7 @@ impl Jitter {
 
                     let ongoing_auction = tokio::spawn(async move {
                         let _ = jitter
-                            .try_fastlane_fill(
+                            .try_swift_fill(
                                 &signed_order_info,
                                 order_signature,
                                 &JitTakerParams::new(
@@ -529,7 +529,7 @@ impl JitterStrategy for Shotgun {
 
         Ok(())
     }
-    async fn try_fastlane_fill(
+    async fn try_swift_fill(
         &self,
         signed_order_info: &SignedOrderInfo,
         order_sig: String,
@@ -558,7 +558,7 @@ impl JitterStrategy for Shotgun {
 
             let jit_result = self
                 .jit_proxy_client
-                .try_fastlane_fill(
+                .try_swift_fill(
                     signed_order_info,
                     taker_params,
                     jit_ix_params,
