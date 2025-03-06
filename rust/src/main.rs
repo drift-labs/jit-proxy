@@ -25,6 +25,7 @@ use crate::jitter::Jitter;
 #[tokio::main]
 async fn main() {
     env_logger::init();
+    let _ = dotenv::dotenv();
 
     let rpc_url = env::var("RPC_URL").expect("RPC_URL must be set");
     let private_key = env::var("PRIVATE_KEY").expect("PRIVATE_KEY must be set");
