@@ -16,7 +16,7 @@ import {
 	OrderStatus,
 	PositionDirection,
 	PostOnlyParams,
-	FastlaneOrderSubscriber,
+	SwiftOrderSubscriber,
 	SlotSubscriber,
 	SignedMsgOrderParams,
 	UserAccount,
@@ -45,11 +45,11 @@ export type JitParams = {
 
 export abstract class BaseJitter {
 	auctionSubscriber: AuctionSubscriber;
-	fastlaneOrderSubscriber: FastlaneOrderSubscriber;
+	swiftOrderSubscriber: SwiftOrderSubscriber;
 	slotSubscriber: SlotSubscriber;
 	driftClient: DriftClient;
 	jitProxyClient: JitProxyClient;
-	auctionSubscriberIgnoresFastlaneOrders?: boolean;
+	auctionSubscriberIgnoresSwiftOrders?: boolean;
 	userStatsMap: UserStatsMap;
 
 	perpParams = new Map<number, JitParams>();
@@ -68,17 +68,17 @@ export abstract class BaseJitter {
 		jitProxyClient,
 		driftClient,
 		userStatsMap,
-		fastlaneOrderSubscriber,
+		swiftOrderSubscriber,
 		slotSubscriber,
-		auctionSubscriberIgnoresFastlaneOrders,
+		auctionSubscriberIgnoresSwiftOrders,
 	}: {
 		driftClient: DriftClient;
 		auctionSubscriber: AuctionSubscriber;
 		jitProxyClient: JitProxyClient;
 		userStatsMap: UserStatsMap;
-		fastlaneOrderSubscriber?: FastlaneOrderSubscriber;
+		swiftOrderSubscriber?: SwiftOrderSubscriber;
 		slotSubscriber?: SlotSubscriber;
-		auctionSubscriberIgnoresFastlaneOrders?: boolean;
+		auctionSubscriberIgnoresSwiftOrders?: boolean;
 	}) {
 		this.auctionSubscriber = auctionSubscriber;
 		this.driftClient = driftClient;
@@ -90,11 +90,11 @@ export abstract class BaseJitter {
 				new BulkAccountLoader(this.driftClient.connection, 'confirmed', 0)
 			);
 		this.slotSubscriber = slotSubscriber;
-		this.fastlaneOrderSubscriber = fastlaneOrderSubscriber;
-		this.auctionSubscriberIgnoresFastlaneOrders =
-			auctionSubscriberIgnoresFastlaneOrders;
+		this.swiftOrderSubscriber = swiftOrderSubscriber;
+		this.auctionSubscriberIgnoresSwiftOrders =
+			auctionSubscriberIgnoresSwiftOrders;
 
-		if (this.fastlaneOrderSubscriber && !this.slotSubscriber) {
+		if (this.swiftOrderSubscriber && !this.slotSubscriber) {
 			throw new Error(
 				'Slot subscriber is required for signedMsg order subscriber'
 			);
@@ -124,7 +124,7 @@ export abstract class BaseJitter {
 					}
 
 					if (
-						this.auctionSubscriberIgnoresFastlaneOrders &&
+						this.auctionSubscriberIgnoresSwiftOrders &&
 						isSignedMsgOrder(order)
 					) {
 						continue;
@@ -203,7 +203,7 @@ export abstract class BaseJitter {
 			}
 		);
 		await this.slotSubscriber?.subscribe();
-		await this.fastlaneOrderSubscriber?.subscribe(
+		await this.swiftOrderSubscriber?.subscribe(
 			async (orderMessageRaw, signedMsgOrderParamsMessage) => {
 				const signedMsgOrderParams =
 					signedMsgOrderParamsMessage.signedMsgOrderParams;
@@ -240,7 +240,7 @@ export abstract class BaseJitter {
 				);
 				const takerUserPubkeyString = takerUserPubkey.toBase58();
 				const takerUserAccount = (
-					await this.fastlaneOrderSubscriber.userMap.mustGet(
+					await this.swiftOrderSubscriber.userMap.mustGet(
 						takerUserPubkey.toString()
 					)
 				).getUserAccount();
