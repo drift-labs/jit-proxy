@@ -6,7 +6,8 @@ edition = "2021"
 [dependencies]
 async-trait = "0.1.86"
 dashmap = "6"
-drift-rs = { git = "https://github.com/drift-labs/drift-rs", rev = "28a22b" }
+dotenv = "0.15.0"
+drift-rs = { git = "https://github.com/drift-labs/drift-rs", rev = "5e1b5f8b" }
 env_logger = "0.11"
 futures = "0.3"
 futures-util = "0.3"
