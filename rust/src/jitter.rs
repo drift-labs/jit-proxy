@@ -11,9 +11,9 @@ use async_trait::async_trait;
 use dashmap::DashMap;
 use drift_rs::{
     auction_subscriber::{AuctionSubscriber, AuctionSubscriberConfig},
-    swift_order_subscriber::SignedOrderInfo,
     jit_client::{ComputeBudgetParams, JitIxParams, JitProxyClient, JitTakerParams},
     slot_subscriber::SlotSubscriber,
+    swift_order_subscriber::SignedOrderInfo,
     types::{
         accounts::{User, UserStats},
         CommitmentConfig, MarketType, Order, OrderStatus, ReferrerInfo, RpcSendTransactionConfig,
