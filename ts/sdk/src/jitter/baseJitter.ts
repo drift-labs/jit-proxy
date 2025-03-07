@@ -99,6 +99,12 @@ export abstract class BaseJitter {
 				'Slot subscriber is required for signedMsg order subscriber'
 			);
 		}
+
+		if (!this.swiftOrderSubscriber.userAccountGetter) {
+			throw new Error(
+				'User account getter is required in swift order subscriber for jit integration'
+			);
+		}
 	}
 
 	async subscribe(): Promise<void> {
@@ -239,12 +245,10 @@ export abstract class BaseJitter {
 					takerSubaccountId
 				);
 				const takerUserPubkeyString = takerUserPubkey.toBase58();
-				const takerUserAccount = (
-					await this.swiftOrderSubscriber.userMap.mustGet(
+				const takerUserAccount =
+					await this.swiftOrderSubscriber.userAccountGetter.mustGetUserAccount(
 						takerUserPubkey.toString()
-					)
-				).getUserAccount();
-
+					);
 				const orderSlot = Math.min(
 					signedMsgOrderParamsMessage.slot.toNumber(),
 					this.slotSubscriber.getSlot()
