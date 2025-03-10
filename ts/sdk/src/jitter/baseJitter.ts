@@ -253,6 +253,14 @@ export abstract class BaseJitter {
 					signedMsgOrderParamsMessage.slot.toNumber(),
 					this.slotSubscriber.getSlot()
 				);
+
+				/**
+				 * Base asset amount equalling u64::max is a special case that signals to program
+				 * to bring taker to max leverage. Program will calculate the max base asset amount to do this
+				 * once the tx lands on chain.
+				 *
+				 * You will see this is base asset amount is ffffffffffffffff
+				 */
 				const signedMsgOrder: Order = {
 					status: OrderStatus.OPEN,
 					orderType: signedMsgOrderParams.orderType,
