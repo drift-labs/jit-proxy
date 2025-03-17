@@ -128,10 +128,10 @@
     bn.js "^5.1.2"
     buffer-layout "^1.2.0"
 
-"@drift-labs/sdk@2.115.0-beta.2":
-  version "2.115.0-beta.2"
-  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.115.0-beta.2.tgz#d434ef526866085ab334b74d62761f36e871be49"
-  integrity sha512-MhzNGgGsaT58F5WHvPnozoY1zjXSqmHmPuGJkMlT73D2LqQz8WqaxoDMjr6UyehC0mIs4zuAKHGJEinceLBcVw==
+"@drift-labs/sdk@2.115.0-beta.3":
+  version "2.115.0-beta.3"
+  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.115.0-beta.3.tgz#a92c1ae2abd69d26170e79592335323881d26a18"
+  integrity sha512-SaecTpg0FRAO70j/tdO32rdQ83qxhDv4+VXrIfvb5ZQB3A4VGWxb5iTyaICwGFtlGyVU18jSjBTCkRnJH34DfQ==
   dependencies:
     "@coral-xyz/anchor" "0.29.0"
     "@coral-xyz/anchor-30" "npm:@coral-xyz/anchor@0.30.1"
@@ -144,7 +144,7 @@
     "@pythnetwork/pyth-solana-receiver" "0.7.0"
     "@solana/spl-token" "0.3.7"
     "@solana/web3.js" "1.92.3"
-    "@switchboard-xyz/on-demand" "2.2.0"
+    "@switchboard-xyz/on-demand" "2.3.2"
     "@triton-one/yellowstone-grpc" "1.3.0"
     anchor-bankrun "0.3.0"
     nanoid "3.3.4"
@@ -826,10 +826,10 @@
     protobufjs "^7.4.0"
     yaml "^2.6.1"
 
-"@switchboard-xyz/on-demand@2.2.0":
-  version "2.2.0"
-  resolved "https://registry.yarnpkg.com/@switchboard-xyz/on-demand/-/on-demand-2.2.0.tgz#543dd8cba68cdf02838da6c427f0c0709875154b"
-  integrity sha512-3WOyvJW9kSnu2qC3sFczcx0XhC170A3E1LaEQVdRcLjmeWkLtTbhnxP7hKSJA+Y83MNdAfyGH0F8Eix/NmaagA==
+"@switchboard-xyz/on-demand@2.3.2":
+  version "2.3.2"
+  resolved "https://registry.yarnpkg.com/@switchboard-xyz/on-demand/-/on-demand-2.3.2.tgz#78dca1eced8b8cda0863c605447700d96f927ca6"
+  integrity sha512-oFkkjIsJGfY64rEFtJpk4oqEK/ELlVRRy/WrpdgDW3HWXLMZSP13rjuG/0BkJMqI5xXDDEwI/AMgpXhH0XEJTQ==
   dependencies:
     "@coral-xyz/anchor-30" "npm:@coral-xyz/anchor@0.30.1"
     "@isaacs/ttlcache" "^1.4.1"
