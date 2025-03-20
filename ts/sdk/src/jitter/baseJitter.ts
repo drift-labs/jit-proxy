@@ -24,6 +24,8 @@ import {
 	ZERO,
 	isSignedMsgOrder,
 	OrderTriggerCondition,
+	SignedMsgOrderParamsDelegateMessage,
+	SignedMsgOrderParamsMessage,
 } from '@drift-labs/sdk';
 import { decodeUTF8 } from 'tweetnacl-util';
 
@@ -210,9 +212,8 @@ export abstract class BaseJitter {
 		);
 		await this.slotSubscriber?.subscribe();
 		await this.swiftOrderSubscriber?.subscribe(
-			async (orderMessageRaw, signedMsgOrderParamsMessage) => {
-				const signedMsgOrderParams =
-					signedMsgOrderParamsMessage.signedMsgOrderParams;
+			async (orderMessageRaw, signedMessage) => {
+				const signedMsgOrderParams = signedMessage.signedMsgOrderParams;
 
 				if (
 					!signedMsgOrderParams.auctionDuration ||
@@ -231,7 +232,6 @@ export abstract class BaseJitter {
 				const signedMsgOrderParamsBufHex = Buffer.from(
 					orderMessageRaw['order_message']
 				);
-				const takerSubaccountId = signedMsgOrderParamsMessage.subAccountId;
 
 				const takerAuthority = new PublicKey(
 					orderMessageRaw['taker_authority']
@@ -239,18 +239,21 @@ export abstract class BaseJitter {
 				const signingAuthority = new PublicKey(
 					orderMessageRaw['signing_authority']
 				);
-				const takerUserPubkey = await getUserAccountPublicKey(
-					this.driftClient.program.programId,
-					takerAuthority,
-					takerSubaccountId
-				);
+				const isDelegateSigner = takerAuthority != signingAuthority;
+				const takerUserPubkey = isDelegateSigner
+					? (signedMessage as SignedMsgOrderParamsDelegateMessage).takerPubkey
+					: await getUserAccountPublicKey(
+							this.driftClient.program.programId,
+							takerAuthority,
+							(signedMessage as SignedMsgOrderParamsMessage).subAccountId
+					  );
 				const takerUserPubkeyString = takerUserPubkey.toBase58();
 				const takerUserAccount =
 					await this.swiftOrderSubscriber.userAccountGetter.mustGetUserAccount(
 						takerUserPubkey.toString()
 					);
 				const orderSlot = Math.min(
-					signedMsgOrderParamsMessage.slot.toNumber(),
+					signedMessage.slot.toNumber(),
 					this.slotSubscriber.getSlot()
 				);
 
