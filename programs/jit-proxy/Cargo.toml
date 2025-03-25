@@ -1,6 +1,6 @@
 [package]
 name = "jit-proxy"
-version = "0.14.0"
+version = "0.15.2"
 description = "Created with Anchor"
 edition = "2021"
 
@@ -17,7 +17,7 @@ default = []
 anchor-lang = "0.29.0"
 anchor-spl = "0.29.0"
 bytemuck = { version = "1.4.0" }
-drift = { git = "https://github.com/drift-labs/protocol-v2.git", commit = "43ba428c1737529bf9ff86ce43fb53d0294cf5f6", features = ["cpi", "mainnet-beta"]}
+drift = { git = "https://github.com/drift-labs/protocol-v2.git", rev = "c5ccc9bb2a9a8061c77dc6727fa0c5da0e7a6f01", features = ["cpi", "mainnet-beta"]}
 static_assertions = "1.1.0"
 solana-program = "1.16"
 ahash = "=0.8.6"

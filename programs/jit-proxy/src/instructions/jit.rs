@@ -262,7 +262,7 @@ fn process_order(
         slot,
         tick_size,
         is_prediction_market,
-        false,
+        None,
     )? {
         Some(price) => price,
         None if market_type == DriftMarketType::Perp => {
