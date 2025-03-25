@@ -212,7 +212,7 @@ export abstract class BaseJitter {
 		);
 		await this.slotSubscriber?.subscribe();
 		await this.swiftOrderSubscriber?.subscribe(
-			async (orderMessageRaw, signedMessage) => {
+			async (orderMessageRaw, signedMessage, isDelegateSigner) => {
 				const signedMsgOrderParams = signedMessage.signedMsgOrderParams;
 
 				if (
@@ -239,7 +239,6 @@ export abstract class BaseJitter {
 				const signingAuthority = new PublicKey(
 					orderMessageRaw['signing_authority']
 				);
-				const isDelegateSigner = takerAuthority != signingAuthority;
 				const takerUserPubkey = isDelegateSigner
 					? (signedMessage as SignedMsgOrderParamsDelegateMessage).takerPubkey
 					: await getUserAccountPublicKey(
