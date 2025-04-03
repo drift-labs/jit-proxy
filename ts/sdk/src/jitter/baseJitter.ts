@@ -102,7 +102,7 @@ export abstract class BaseJitter {
 			);
 		}
 
-		if (!this.swiftOrderSubscriber.userAccountGetter) {
+		if (!this.auctionSubscriberIgnoresSwiftOrders && !this.swiftOrderSubscriber.userAccountGetter) {
 			throw new Error(
 				'User account getter is required in swift order subscriber for jit integration'
 			);
