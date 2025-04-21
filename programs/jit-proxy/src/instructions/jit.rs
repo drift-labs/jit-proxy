@@ -199,6 +199,7 @@ pub fn jit_signed_msg<'c: 'info, 'info>(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 #[inline(always)]
 fn process_order(
     maker: &User,
