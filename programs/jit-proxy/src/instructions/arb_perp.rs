@@ -7,7 +7,7 @@ use drift::math::casting::Cast;
 use drift::math::constants::{BASE_PRECISION, MARGIN_PRECISION_U128, QUOTE_PRECISION};
 use drift::math::margin::MarginRequirementType;
 use drift::program::Drift;
-use drift::state::order_params::{OrderParams, PostOnlyParam};
+use drift::state::order_params::{OrderParams, OrderParamsBitFlag, PostOnlyParam};
 use std::collections::BTreeSet;
 use std::ops::Deref;
 
@@ -104,7 +104,7 @@ pub fn arb_perp<'c: 'info, 'info>(
             market_index,
             reduce_only: false,
             post_only: PostOnlyParam::None,
-            immediate_or_cancel: true,
+            bit_flags: OrderParamsBitFlag::ImmediateOrCancel as u8,
             max_ts: None,
             trigger_price: None,
             trigger_condition: OrderTriggerCondition::Above,
