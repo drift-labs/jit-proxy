@@ -7,7 +7,7 @@ use drift::instructions::optional_accounts::{load_maps, AccountMaps};
 use drift::math::casting::Cast;
 use drift::math::safe_math::SafeMath;
 use drift::program::Drift;
-use drift::state::order_params::OrderParams;
+use drift::state::order_params::{OrderParams, OrderParamsBitFlag};
 use drift::state::perp_market_map::PerpMarketMap;
 use drift::state::signed_msg_user::SignedMsgUserOrdersLoader;
 use drift::state::spot_market_map::SpotMarketMap;
@@ -381,7 +381,7 @@ fn process_order(
         market_index,
         reduce_only: false,
         post_only,
-        immediate_or_cancel: true,
+        bit_flags: OrderParamsBitFlag::ImmediateOrCancel as u8,
         max_ts: None,
         trigger_price: None,
         trigger_condition: OrderTriggerCondition::Above,
