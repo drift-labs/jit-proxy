@@ -11,7 +11,7 @@
     },
     "devDependencies": {
         "@coral-xyz/anchor": "^0.26.0",
-        "@drift-labs/sdk": "2.110.0-beta.16",
+        "@drift-labs/sdk": "2.120.0-beta.0",
         "@solana/web3.js": "1.73.2",
         "@types/bn.js": "^5.1.0",
         "@types/chai": "^4.3.0",
