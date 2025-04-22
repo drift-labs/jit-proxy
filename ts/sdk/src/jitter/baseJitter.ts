@@ -26,6 +26,7 @@ import {
 	OrderTriggerCondition,
 	SignedMsgOrderParamsDelegateMessage,
 	SignedMsgOrderParamsMessage,
+	OrderParamsBitFlag,
 } from '@drift-labs/sdk';
 import { decodeUTF8 } from 'tweetnacl-util';
 
@@ -272,7 +273,10 @@ export abstract class BaseJitter {
 					auctionDuration: signedMsgOrderParams.auctionDuration,
 					auctionStartPrice: signedMsgOrderParams.auctionStartPrice,
 					auctionEndPrice: signedMsgOrderParams.auctionEndPrice,
-					immediateOrCancel: signedMsgOrderParams.immediateOrCancel ?? false,
+					immediateOrCancel:
+						(signedMsgOrderParams.bitFlags &
+							OrderParamsBitFlag.ImmediateOrCancel) !== 0,
+					bitFlags: signedMsgOrderParams.bitFlags,
 					direction: signedMsgOrderParams.direction,
 					postOnly: false,
 					oraclePriceOffset: signedMsgOrderParams.oraclePriceOffset ?? 0,
@@ -289,7 +293,6 @@ export abstract class BaseJitter {
 					baseAssetAmountFilled: ZERO,
 					quoteAssetAmountFilled: ZERO,
 					quoteAssetAmount: ZERO,
-					bitFlags: 0,
 					postedSlotTail: 0,
 				};
 
