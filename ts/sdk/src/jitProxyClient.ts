@@ -194,7 +194,7 @@ export class JitProxyClient {
 		};
 
 		return this.program.methods
-			.jit(jitParams)
+			.jit(jitParams as any)
 			.accounts({
 				taker: takerKey,
 				takerStats: takerStatsKey,
@@ -256,7 +256,7 @@ export class JitProxyClient {
 		};
 
 		return this.program.methods
-			.jitSignedMsg(jitSignedMsgParams)
+			.jitSignedMsg(jitSignedMsgParams as any)
 			.accounts({
 				taker: takerKey,
 				takerStats: takerStatsKey,
@@ -303,7 +303,7 @@ export class JitProxyClient {
 		});
 
 		return this.program.methods
-			.checkOrderConstraints(orderConstraints)
+			.checkOrderConstraints(orderConstraints as any)
 			.accounts({
 				user: await this.driftClient.getUserAccountPublicKey(subAccountId),
 			})

@@ -275,7 +275,8 @@ export abstract class BaseJitter {
 					auctionEndPrice: signedMsgOrderParams.auctionEndPrice,
 					immediateOrCancel:
 						(signedMsgOrderParams.bitFlags &
-							OrderParamsBitFlag.ImmediateOrCancel) !== 0,
+							OrderParamsBitFlag.ImmediateOrCancel) !==
+						0,
 					bitFlags: signedMsgOrderParams.bitFlags,
 					direction: signedMsgOrderParams.direction,
 					postOnly: false,
