@@ -10,7 +10,7 @@
         "anchor-tests": "yarn update-types && yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
     },
     "devDependencies": {
-        "@coral-xyz/anchor": "^0.26.0",
+        "@coral-xyz/anchor": "0.29.0",
         "@drift-labs/sdk": "2.120.0-beta.0",
         "@solana/web3.js": "1.73.2",
         "@types/bn.js": "^5.1.0",
