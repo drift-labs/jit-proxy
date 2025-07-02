@@ -52,6 +52,61 @@ export class PriceType {
 	static readonly ORACLE = { oracle: {} };
 }
 
+/**
+ * Validates the price type and returns the corresponding enum value. (required for type checking because of how anchor handles recursive types in IDL)
+ */
+export function validatePriceType(
+	priceType: PriceType
+): typeof PriceType.LIMIT | typeof PriceType.ORACLE {
+	if (isVariant(priceType, 'limit')) {
+		return PriceType.LIMIT;
+	}
+	if (isVariant(priceType, 'oracle')) {
+		return PriceType.ORACLE;
+	}
+	throw new Error('Invalid price type');
+}
+
+/**
+ * Validates the PostOnlyParams and returns the corresponding enum value. (required for type checking because of how anchor handles recursive types in IDL)
+ */
+export function validatePostOnlyParams(
+	postOnly: PostOnlyParams
+):
+	| typeof PostOnlyParams.NONE
+	| typeof PostOnlyParams.MUST_POST_ONLY
+	| typeof PostOnlyParams.TRY_POST_ONLY
+	| typeof PostOnlyParams.SLIDE {
+	if (isVariant(postOnly, 'none')) {
+		return PostOnlyParams.NONE;
+	}
+	if (isVariant(postOnly, 'mustPostOnly')) {
+		return PostOnlyParams.MUST_POST_ONLY;
+	}
+	if (isVariant(postOnly, 'tryPostOnly')) {
+		return PostOnlyParams.TRY_POST_ONLY;
+	}
+	if (isVariant(postOnly, 'slide')) {
+		return PostOnlyParams.SLIDE;
+	}
+	throw new Error('Invalid post only params');
+}
+
+/**
+ * Validates the market type and returns the corresponding enum value. (required for type checking because of how anchor handles recursive types in IDL)
+ */
+export function validateMarketType(
+	marketType: MarketType
+): typeof MarketType.PERP | typeof MarketType.SPOT {
+	if (isVariant(marketType, 'perp')) {
+		return MarketType.PERP;
+	}
+	if (isVariant(marketType, 'spot')) {
+		return MarketType.SPOT;
+	}
+	throw new Error('Invalid market type');
+}
+
 export type OrderConstraint = {
 	maxPosition: BN;
 	minPosition: BN;
@@ -189,12 +244,12 @@ export class JitProxyClient {
 			minPosition,
 			bid,
 			ask,
-			postOnly,
-			priceType,
+			postOnly: validatePostOnlyParams(postOnly),
+			priceType: validatePriceType(priceType),
 		};
 
 		return this.program.methods
-			.jit(jitParams as any)
+			.jit(jitParams)
 			.accounts({
 				taker: takerKey,
 				takerStats: takerStatsKey,
@@ -251,12 +306,12 @@ export class JitProxyClient {
 			minPosition,
 			bid,
 			ask,
-			postOnly,
-			priceType,
+			postOnly: validatePostOnlyParams(postOnly),
+			priceType: validatePriceType(priceType),
 		};
 
 		return this.program.methods
-			.jitSignedMsg(jitSignedMsgParams as any)
+			.jitSignedMsg(jitSignedMsgParams)
 			.accounts({
 				taker: takerKey,
 				takerStats: takerStatsKey,
@@ -302,8 +357,15 @@ export class JitProxyClient {
 			readablePerpMarketIndex,
 		});
 
+		const validatedOrderConstraints = orderConstraints.map(
+			(orderConstraint) => ({
+				...orderConstraint,
+				marketType: validateMarketType(orderConstraint.marketType),
+			})
+		);
+
 		return this.program.methods
-			.checkOrderConstraints(orderConstraints as any)
+			.checkOrderConstraints(validatedOrderConstraints)
 			.accounts({
 				user: await this.driftClient.getUserAccountPublicKey(subAccountId),
 			})
