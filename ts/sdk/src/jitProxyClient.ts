@@ -71,12 +71,15 @@ export function validatePriceType(
  * Validates the PostOnlyParams and returns the corresponding enum value. (required for type checking because of how anchor handles recursive types in IDL)
  */
 export function validatePostOnlyParams(
-	postOnly: PostOnlyParams
+	postOnly: PostOnlyParams | null
 ):
 	| typeof PostOnlyParams.NONE
 	| typeof PostOnlyParams.MUST_POST_ONLY
 	| typeof PostOnlyParams.TRY_POST_ONLY
 	| typeof PostOnlyParams.SLIDE {
+	if (postOnly === null) {
+		return PostOnlyParams.NONE;
+	}
 	if (isVariant(postOnly, 'none')) {
 		return PostOnlyParams.NONE;
 	}
