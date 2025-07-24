@@ -1,7 +1,7 @@
 use anchor_lang::prelude::Pubkey;
 use anchor_lang::prelude::*;
 use drift::controller::position::PositionDirection;
-use drift::cpi::accounts::{PlaceAndMake, PlaceAndMakeSignedMsg};
+use drift::cpi::accounts::{PlaceAndMake, PlaceAndMakeSignedMsg, UpdateAMM};
 use drift::error::DriftResult;
 use drift::instructions::optional_accounts::{load_maps, AccountMaps};
 use drift::math::casting::Cast;
@@ -57,6 +57,19 @@ pub fn jit<'c: 'info, 'info>(
         let spot_market = spot_market_map.get_ref(&taker_order.market_index)?;
         oracle_map.get_price_data(&spot_market.oracle_id())?.price
     };
+
+    if market_type == DriftMarketType::Perp {
+        let drift_program = ctx.accounts.drift_program.to_account_info().clone();
+        let cpi_accounts = UpdateAMM {
+            state: ctx.accounts.state.to_account_info().clone(),
+            authority: ctx.accounts.authority.to_account_info().clone(),
+        };
+
+        let cpi_context = CpiContext::new(drift_program, cpi_accounts)
+            .with_remaining_accounts(ctx.remaining_accounts.into());
+
+        drift::cpi::update_amms(cpi_context, vec![market_index])?;
+    }
 
     let (order_params, taker_base_asset_amount_unfilled, taker_price, maker_price) = process_order(
         &maker,
@@ -140,6 +153,17 @@ pub fn jit_signed_msg<'c: 'info, 'info>(
         slot,
         None,
     )?;
+
+    let drift_program = ctx.accounts.drift_program.to_account_info().clone();
+    let cpi_accounts = UpdateAMM {
+        state: ctx.accounts.state.to_account_info().clone(),
+        authority: ctx.accounts.authority.to_account_info().clone(),
+    };
+
+    let cpi_context = CpiContext::new(drift_program, cpi_accounts)
+        .with_remaining_accounts(ctx.remaining_accounts.into());
+
+    drift::cpi::update_amms(cpi_context, vec![taker_order.market_index])?;
 
     let oracle_price = oracle_map
         .get_price_data(
@@ -241,7 +265,6 @@ fn process_order(
     let (tick_size, min_order_size, is_prediction_market) = if market_type == DriftMarketType::Perp
     {
         let perp_market = perp_market_map.get_ref(&market_index)?;
-
         (
             perp_market.amm.order_tick_size,
             perp_market.amm.min_order_size,
