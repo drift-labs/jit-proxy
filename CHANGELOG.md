@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 
+- program update drift-version to v2.129.0[#69](https://github.com/drift-labs/jit-proxy/pull/69)
+
 ### Fixes
 
 ### Breaking
