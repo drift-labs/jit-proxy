@@ -17,7 +17,7 @@ default = []
 anchor-lang = "0.29.0"
 anchor-spl = "0.29.0"
 bytemuck = { version = "1.4.0" }
-drift = { git = "https://github.com/drift-labs/protocol-v2.git", rev = "3a7e11e2beea9118c35bcc83d80b75d91c69a196", features = ["cpi", "mainnet-beta"]}
+drift = { git = "https://github.com/drift-labs/protocol-v2.git", rev = "607a687b853df54a79d490d296a6130a0f4fe691", features = ["cpi", "mainnet-beta"]}
 static_assertions = "1.1.0"
 solana-program = "1.16"
 ahash = "=0.8.6"
