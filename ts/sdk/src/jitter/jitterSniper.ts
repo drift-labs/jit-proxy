@@ -444,7 +444,7 @@ export class JitterSniper extends BaseJitter {
 			? this.perpParams.get(order.marketIndex)
 			: this.spotParams.get(order.marketIndex);
 		const oraclePrice = isVariant(order.marketType, 'perp')
-			? this.driftClient.getOracleDataForPerpMarket(order.marketIndex)
+			? this.driftClient.getMMOracleDataForPerpMarket(order.marketIndex)
 			: this.driftClient.getOracleDataForSpotMarket(order.marketIndex);
 
 		const makerOrderDir = isVariant(order.direction, 'long') ? 'sell' : 'buy';
