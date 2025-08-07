@@ -1,6 +1,6 @@
 {
 	"name": "@drift-labs/jit-proxy",
-	"version": "0.19.0",
+	"version": "0.19.1",
 	"scripts": {
 		"clean": "rm -rf lib",
 		"build": "yarn clean && tsc"
@@ -11,7 +11,6 @@
 		"@solana/web3.js": "1.98.0",
 		"tweetnacl-util": "^0.15.1",
 		"typescript": "5.4.5"
-
 	},
 	"engines": {
 		"node": ">=18"
