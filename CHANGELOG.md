@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 
+### Fixes
+
+### Breaking
+
+## [0.19.0] - 2025-08-07
+
+### Features
+
 - program update drift-version to v2.132.0 to use MM oracle price for perps [#70](https://github.com/drift-labs/jit-proxy/pull/70)
 
 ### Fixes
