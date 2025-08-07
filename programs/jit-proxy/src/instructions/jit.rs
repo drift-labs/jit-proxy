@@ -31,6 +31,8 @@ pub fn jit<'c: 'info, 'info>(
     let taker = ctx.accounts.taker.load()?;
     let maker = ctx.accounts.user.load()?;
 
+    let state = &ctx.accounts.state;
+
     let remaining_accounts_iter = &mut ctx.remaining_accounts.iter().peekable();
     let AccountMaps {
         perp_market_map,
@@ -52,7 +54,13 @@ pub fn jit<'c: 'info, 'info>(
 
     let oracle_price = if taker_order.market_type == DriftMarketType::Perp {
         let perp_market = perp_market_map.get_ref(&taker_order.market_index)?;
-        oracle_map.get_price_data(&perp_market.oracle_id())?.price
+        perp_market
+            .get_mm_oracle_price_data(
+                *oracle_map.get_price_data(&perp_market.oracle_id())?,
+                clock.slot,
+                &state.oracle_guard_rails.validity,
+            )?
+            .get_price()
     } else {
         let spot_market = spot_market_map.get_ref(&taker_order.market_index)?;
         oracle_map.get_price_data(&spot_market.oracle_id())?.price
@@ -118,6 +126,8 @@ pub fn jit_signed_msg<'c: 'info, 'info>(
     let taker = ctx.accounts.taker.load()?;
     let maker = ctx.accounts.user.load()?;
 
+    let state = &ctx.accounts.state;
+
     let taker_signed_msg_account = ctx.accounts.taker_signed_msg_user_orders.load()?;
     let taker_order_id = taker_signed_msg_account
         .iter()
@@ -141,13 +151,14 @@ pub fn jit_signed_msg<'c: 'info, 'info>(
         None,
     )?;
 
-    let oracle_price = oracle_map
-        .get_price_data(
-            &perp_market_map
-                .get_ref(&taker_order.market_index)?
-                .oracle_id(),
+    let perp_market = perp_market_map.get_ref(&taker_order.market_index)?;
+    let oracle_price = perp_market
+        .get_mm_oracle_price_data(
+            *oracle_map.get_price_data(&perp_market.oracle_id())?,
+            clock.slot,
+            &state.oracle_guard_rails.validity,
         )?
-        .price;
+        .get_price();
 
     let (order_params, taker_base_asset_amount_unfilled, taker_price, maker_price) = process_order(
         &maker,
