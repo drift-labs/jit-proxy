@@ -159,6 +159,7 @@ pub fn jit_signed_msg<'c: 'info, 'info>(
             &state.oracle_guard_rails.validity,
         )?
         .get_price();
+    drop(perp_market);
 
     let (order_params, taker_base_asset_amount_unfilled, taker_price, maker_price) = process_order(
         &maker,
