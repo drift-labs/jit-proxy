@@ -1321,7 +1321,7 @@ checksum = "7a73e9fe3c49d7afb2ace819fa181a287ce54a0983eda4e0eb05c22f82ffe534"
 
 [[package]]
 name = "jit-proxy"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "ahash 0.8.6",
  "anchor-lang",
