@@ -19,9 +19,9 @@ pub fn check_order_constraints<'c: 'info, 'info>(
 
     let remaining_accounts_iter = &mut ctx.remaining_accounts.iter().peekable();
     let AccountMaps {
-        perp_market_map,
+        perp_market_map: _,
         spot_market_map,
-        mut oracle_map,
+        oracle_map: _,
     } = load_maps(
         remaining_accounts_iter,
         &BTreeSet::new(),
@@ -48,13 +48,10 @@ pub fn check_order_constraints<'c: 'info, 'info>(
                 spot_position.open_asks,
             )?;
         } else {
-            let perp_market = perp_market_map.get_ref(&constraint.market_index)?;
             let perp_position = match user.get_perp_position(constraint.market_index) {
                 Ok(perp_position) => perp_position,
                 Err(_) => continue,
             };
-
-            let oracle_price = oracle_map.get_price_data(&perp_market.oracle_id())?.price;
 
             constraint.check(
                 perp_position.base_asset_amount,

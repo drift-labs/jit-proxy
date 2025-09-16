@@ -352,8 +352,11 @@ fn process_order(
         .get_base_asset_amount_unfilled(None)?
         .max(min_order_size);
     let maker_existing_position = if market_type == DriftMarketType::Perp {
-        let perp_market = perp_market_map.get_ref(&market_index)?;
-        maker.get_perp_position(market_index)?.base_asset_amount
+        let perp_position = maker.get_perp_position(market_index);
+        match perp_position {
+            Ok(perp_position) => perp_position.base_asset_amount,
+            Err(_) => 0,
+        }
     } else {
         let spot_market = spot_market_map.get_ref(&market_index)?;
         maker
