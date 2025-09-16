@@ -56,13 +56,10 @@ pub fn check_order_constraints<'c: 'info, 'info>(
 
             let oracle_price = oracle_map.get_price_data(&perp_market.oracle_id())?.price;
 
-            let settled_perp_position =
-                perp_position.simulate_settled_lp_position(&perp_market, oracle_price)?;
-
             constraint.check(
-                settled_perp_position.base_asset_amount,
-                settled_perp_position.open_bids,
-                settled_perp_position.open_asks,
+                perp_position.base_asset_amount,
+                perp_position.open_bids,
+                perp_position.open_asks,
             )?;
         }
     }
