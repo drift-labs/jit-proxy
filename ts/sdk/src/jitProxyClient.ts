@@ -11,6 +11,8 @@ import {
 	SignedMsgOrderParams,
 	TxParams,
 	UserAccount,
+	hasBuilder,
+	getRevenueShareEscrowAccountPublicKey,
 } from '@drift-labs/sdk';
 import { IDL, JitProxy } from './types/jit_proxy';
 import {
@@ -239,6 +241,17 @@ export class JitProxyClient {
 				isWritable: false,
 				isSigner: false,
 			});
+		} else {
+			if (hasBuilder(order)) {
+				remainingAccounts.push({
+					pubkey: getRevenueShareEscrowAccountPublicKey(
+						this.program.programId,
+						taker.authority
+					),
+					isWritable: true,
+					isSigner: false,
+				});
+			}
 		}
 
 		const jitParams = {
@@ -279,6 +292,8 @@ export class JitProxyClient {
 		subAccountId,
 		uuid,
 		marketIndex,
+		signedMsgOrderParams,
+		authorityToUse,
 	}: JitSignedMsgIxParams): Promise<TransactionInstruction> {
 		subAccountId =
 			subAccountId !== undefined
@@ -298,6 +313,30 @@ export class JitProxyClient {
 			});
 			remainingAccounts.push({
 				pubkey: referrerInfo.referrerStats,
+				isWritable: true,
+				isSigner: false,
+			});
+		}
+
+		const isDelegateSigner = authorityToUse.equals(taker.delegate);
+		const borshBuf = Buffer.from(
+			signedMsgOrderParams.orderParams.toString(),
+			'hex'
+		);
+
+		const signedMessage = this.driftClient.decodeSignedMsgOrderParamsMessage(
+			borshBuf,
+			isDelegateSigner
+		);
+		if (
+			signedMessage.builderFeeTenthBps !== null &&
+			signedMessage.builderIdx !== null
+		) {
+			remainingAccounts.push({
+				pubkey: getRevenueShareEscrowAccountPublicKey(
+					this.program.programId,
+					taker.authority
+				),
 				isWritable: true,
 				isSigner: false,
 			});
