@@ -90,10 +90,10 @@
     bn.js "^5.1.2"
     buffer-layout "^1.2.0"
 
-"@drift-labs/sdk@2.159.0-beta.2":
-  version "2.159.0-beta.2"
-  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.159.0-beta.2.tgz#7670fac48dc98fe04c8aa869a193c52e05da9071"
-  integrity sha512-WkDFgb6aSCeAeVuwN2B+kupc4FyrXN8paWUczfEYk80Bsk0ArPD6teL6Z41NTb6H+saSzUqHUHxxd+3bxgNImQ==
+"@drift-labs/sdk@2.159.0-beta.3":
+  version "2.159.0-beta.3"
+  resolved "https://registry.yarnpkg.com/@drift-labs/sdk/-/sdk-2.159.0-beta.3.tgz#2694fb69c9019805a75598a2d6e2ab17571bbca6"
+  integrity sha512-I0h743N4m4BFG1THYa9a3R3Z6nl0/8Y4shvu0wf1/pxH7bZSKuOPhyEvqM07e39bS1B9BSW80jWOeCseyGHYsQ==
   dependencies:
     "@coral-xyz/anchor" "0.29.0"
     "@coral-xyz/anchor-30" "npm:@coral-xyz/anchor@0.30.1"
@@ -104,7 +104,7 @@
     "@project-serum/serum" "0.13.65"
     "@pythnetwork/client" "2.5.3"
     "@pythnetwork/price-service-sdk" "1.7.1"
-    "@pythnetwork/pyth-lazer-sdk" "5.2.1"
+    "@pythnetwork/pyth-lazer-sdk" "6.0.0"
     "@solana/spl-token" "0.4.13"
     "@solana/web3.js" "1.98.0"
     "@switchboard-xyz/common" "3.0.14"
@@ -373,10 +373,10 @@
   dependencies:
     bn.js "^5.2.1"
 
-"@pythnetwork/pyth-lazer-sdk@5.2.1":
-  version "5.2.1"
-  resolved "https://registry.yarnpkg.com/@pythnetwork/pyth-lazer-sdk/-/pyth-lazer-sdk-5.2.1.tgz#7a35573f30c214c6e3014dcffbdec0053b3f7116"
-  integrity sha512-/0rrPi6sZdVH+cWtW+X/hmQzw+nP2fIF6BlrJRTrqwK2IXWZWW+40sHoj839HrbyUXOJyG9zKyco37eFuTE/nA==
+"@pythnetwork/pyth-lazer-sdk@6.0.0":
+  version "6.0.0"
+  resolved "https://registry.yarnpkg.com/@pythnetwork/pyth-lazer-sdk/-/pyth-lazer-sdk-6.0.0.tgz#6972ee03f72cc72fb198f42983c2292ab007eaa0"
+  integrity sha512-cty4/M4zQOUtFnm1ZsCfMs9x3sLk4ZmEwW0CPqMtDZFai94QGsXHkKvi5LkBPRL4aQg96EuVzOa37H0lHqANeQ==
   dependencies:
     "@isaacs/ttlcache" "^1.4.1"
     buffer "^6.0.3"
