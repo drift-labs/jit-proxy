@@ -8,7 +8,7 @@
 	"dependencies": {
 		"@coral-xyz/anchor": "0.29.0",
 		"@drift-labs/sdk": "2.163.0-beta.0",
-		"@solana/web3.js": "1.98.0",
+		"@solana/web3.js": "1.98.1",
 		"tweetnacl-util": "^0.15.1",
 		"typescript": "5.4.5"
 	},
